@@ -1,3 +1,26 @@
+<!--
+文件名: chat/index.html
+功能描述: 智能旅行规划助手的AI对话页面
+
+包含内容:
+  1. 用户与AI的对话界面
+  2. 行程展示区域(右侧面板)
+  3. 示例提示和对话建议
+  4. 处理用户输入及AI响应显示
+
+UI组件:
+  - 顶部导航栏与返回按钮
+  - 聊天消息区域和输入框
+  - 行程展示面板
+  - 响应式布局适配不同设备
+
+逻辑部分:
+  - 处理用户输入与提交
+  - 调用DeepSeek AI API处理用户请求
+  - 解析AI响应并展示
+  - 管理对话历史记录
+-->
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -165,6 +188,10 @@
     .send-button:hover {
       background-color: #2563eb;
     }
+    .send-button:disabled {
+      background-color: #93c5fd;
+      cursor: not-allowed;
+    }
     .message {
       max-width: 80%;
       padding: 12px 16px;
@@ -188,6 +215,110 @@
       color: #6b7280;
       text-align: center;
       margin-top: 30px;
+    }
+    .thinking {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px;
+      background-color: #f3f4f6;
+      border-radius: 12px;
+      align-self: flex-start;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .thinking .dot {
+      width: 6px;
+      height: 6px;
+      background-color: #6b7280;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite ease-in-out;
+    }
+    .thinking .dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    .thinking .dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+    .trip-content {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+    }
+    .trip-day {
+      margin-bottom: 24px;
+    }
+    .trip-day-title {
+      background-color: #ebf5ff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: #1e40af;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .trip-activity {
+      margin-bottom: 12px;
+      padding-left: 16px;
+      border-left: 2px solid #dbeafe;
+      padding-bottom: 12px;
+    }
+    .trip-activity-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .trip-activity-title {
+      font-weight: 600;
+      color: #4b5563;
+    }
+    .trip-activity-time {
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .trip-activity-desc {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    .trip-activity-location {
+      font-size: 12px;
+      color: #9ca3af;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .trip-notes {
+      margin-top: 20px;
+      background-color: #fffbeb;
+      border: 1px solid #fef3c7;
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .trip-notes-title {
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 8px;
+    }
+    .trip-notes-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .trip-notes-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      font-size: 14px;
+      color: #92400e;
+      margin-bottom: 6px;
+    }
+    .trip-notes-item:before {
+      content: "•";
+      color: #f59e0b;
     }
   </style>
 </head>
@@ -231,7 +362,7 @@
             placeholder="描述您的旅行计划..." 
             onkeypress="handleKeyPress(event)"
           >
-          <button class="send-button" onclick="sendMessage()">发送</button>
+          <button id="sendButton" class="send-button" onclick="sendMessage()">发送</button>
         </div>
       </div>
       
@@ -241,10 +372,12 @@
           <p class="section-description">您的行程将在这里显示</p>
         </div>
         
-        <div class="empty-state">
-          <div class="empty-icon">🗺️</div>
-          <h3 class="empty-title">您的行程将在这里显示</h3>
-          <p class="empty-message">通过左侧聊天框告诉AI助手您的旅行计划，系统将自动生成定制化行程并在此展示。</p>
+        <div id="tripDisplay">
+          <div class="empty-state">
+            <div class="empty-icon">🗺️</div>
+            <h3 class="empty-title">您的行程将在这里显示</h3>
+            <p class="empty-message">通过左侧聊天框告诉AI助手您的旅行计划，系统将自动生成定制化行程并在此展示。</p>
+          </div>
         </div>
       </div>
     </div>
@@ -253,34 +386,130 @@
   </div>
 
   <script>
+    // DeepSeek API相关配置
+    const DEEPSEEK_API_KEY = 'sk-1abab4a487304da28672b7e0ce75c28c';
+    const API_URL = 'https://api.deepseek.com/v1/chat/completions';
+    
+    // 全局变量
+    let isWaitingForResponse = false;
+    let conversationHistory = [];
+    let currentTrip = null;
+    
+    // 初始化系统提示
+    const systemPrompt = `你是一个专业的旅行规划AI助手，专注于帮助用户规划旅行行程。
+请根据用户描述的目的地、天数、偏好等信息，生成一份详细的旅行计划。
+回复格式要求：
+1. 首先简短回应用户的请求
+2. 然后提供一个JSON格式的行程数据，包含在<trip>标签内
+3. 最后可以补充一些额外建议
+
+行程JSON格式示例：
+<trip>
+{
+  "destination": "目的地名称",
+  "duration": "行程天数",
+  "travelType": "旅行类型，如观光、美食、购物等",
+  "days": [
+    {
+      "title": "第一天标题",
+      "activities": [
+        {
+          "time": "上午9:00",
+          "title": "活动名称",
+          "description": "活动描述",
+          "location": "地点"
+        }
+      ]
+    }
+  ],
+  "notes": ["提示1", "提示2"]
+}
+</trip>
+
+请确保JSON格式正确，可以被JavaScript解析。`;
+    
+    // 辅助函数：选择建议问题
     function selectSuggestion(element) {
       document.getElementById('messageInput').value = element.textContent;
     }
     
+    // 辅助函数：处理回车键提交
     function handleKeyPress(event) {
       if (event.key === 'Enter') {
         sendMessage();
       }
     }
     
-    function sendMessage() {
+    // 主函数：发送消息到AI
+    async function sendMessage() {
       const input = document.getElementById('messageInput');
+      const sendButton = document.getElementById('sendButton');
       const message = input.value.trim();
       
-      if (message) {
+      if (message && !isWaitingForResponse) {
         // 清空输入框
         input.value = '';
+        
+        // 禁用发送按钮
+        isWaitingForResponse = true;
+        sendButton.disabled = true;
         
         // 添加用户消息
         addMessage(message, 'user');
         
-        // 模拟AI响应
-        setTimeout(() => {
-          addMessage('感谢您的咨询！目前我们的AI行程规划功能正在开发中，很快就能为您提供专业的旅行建议。请持续关注我们的更新。', 'bot');
-        }, 1000);
+        // 添加思考中的动画
+        const thinkingElement = document.createElement('div');
+        thinkingElement.className = 'thinking';
+        thinkingElement.innerHTML = `
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        `;
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.appendChild(thinkingElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // 更新对话历史
+        conversationHistory.push({
+          role: "user",
+          content: message
+        });
+        
+        try {
+          // 调用DeepSeek API
+          const response = await callDeepSeekAPI(message);
+          
+          // 移除思考中的动画
+          chatMessages.removeChild(thinkingElement);
+          
+          // 解析AI回复，查找行程数据
+          const aiMessage = response.choices[0].message.content;
+          addMessage(aiMessage, 'bot');
+          
+          // 尝试提取行程数据
+          extractAndDisplayTrip(aiMessage);
+          
+          // 更新对话历史
+          conversationHistory.push({
+            role: "assistant",
+            content: aiMessage
+          });
+        } catch (error) {
+          // 移除思考中的动画
+          chatMessages.removeChild(thinkingElement);
+          
+          // 显示错误消息
+          console.error('API调用错误:', error);
+          addMessage('抱歉，我遇到了一些问题。请稍后再试。', 'bot');
+        } finally {
+          // 重新启用发送按钮
+          isWaitingForResponse = false;
+          sendButton.disabled = false;
+        }
       }
     }
     
+    // 辅助函数：添加消息到聊天界面
     function addMessage(text, sender) {
       const chatMessages = document.getElementById('chatMessages');
       
@@ -298,6 +527,146 @@
       // 滚动到底部
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
+    
+    // 辅助函数：调用DeepSeek API
+    async function callDeepSeekAPI(userMessage) {
+      // 准备API请求消息体
+      const messages = [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        ...conversationHistory,
+        {
+          role: "user",
+          content: userMessage
+        }
+      ];
+      
+      // 调用API
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API请求失败: ${response.status}`);
+      }
+      
+      return await response.json();
+    }
+    
+    // 辅助函数：从AI回复中提取行程数据并显示
+    function extractAndDisplayTrip(aiMessage) {
+      // 尝试从回复中提取行程数据
+      const tripMatch = aiMessage.match(/<trip>([\s\S]*?)<\/trip>/);
+      
+      if (tripMatch && tripMatch[1]) {
+        try {
+          // 解析JSON
+          const tripData = JSON.parse(tripMatch[1]);
+          currentTrip = tripData;
+          
+          // 显示行程
+          displayTrip(tripData);
+        } catch (e) {
+          console.error('解析行程JSON失败:', e);
+        }
+      }
+    }
+    
+    // 辅助函数：显示行程
+    function displayTrip(trip) {
+      const tripDisplay = document.getElementById('tripDisplay');
+      
+      // 生成行程HTML
+      let html = `
+        <div class="trip-content">
+          <h3>${trip.destination} 行程规划</h3>
+          <p>${trip.duration} • ${trip.travelType}</p>
+      `;
+      
+      // 添加每天的行程
+      trip.days.forEach((day, index) => {
+        html += `
+          <div class="trip-day">
+            <div class="trip-day-title">第${index + 1}天: ${day.title}</div>
+        `;
+        
+        // 添加每天的活动
+        day.activities.forEach(activity => {
+          html += `
+            <div class="trip-activity">
+              <div class="trip-activity-header">
+                <div class="trip-activity-title">${activity.title}</div>
+                <div class="trip-activity-time">${activity.time}</div>
+              </div>
+              <div class="trip-activity-desc">${activity.description}</div>
+              ${activity.location ? `<div class="trip-activity-location">📍 ${activity.location}</div>` : ''}
+            </div>
+          `;
+        });
+        
+        html += `</div>`;
+      });
+      
+      // 添加旅行提示
+      if (trip.notes && trip.notes.length > 0) {
+        html += `
+          <div class="trip-notes">
+            <div class="trip-notes-title">旅行提示与建议</div>
+            <ul class="trip-notes-list">
+        `;
+        
+        trip.notes.forEach(note => {
+          html += `<li class="trip-notes-item">${note}</li>`;
+        });
+        
+        html += `
+            </ul>
+          </div>
+        `;
+      }
+      
+      html += `</div>`;
+      
+      // 更新UI
+      tripDisplay.innerHTML = html;
+    }
+    
+    // 添加初始AI消息
+    setTimeout(() => {
+      const chatMessages = document.getElementById('chatMessages');
+      
+      // 如果是空状态，才添加欢迎消息
+      if (chatMessages.querySelector('.empty-state')) {
+        const welcomeMessage = '您好！我是您的智能旅行规划助手。请告诉我您想去哪里旅行，包括目的地、旅行天数和您的偏好，我将帮您规划一个完美的行程。';
+        
+        // 清除空状态
+        chatMessages.innerHTML = '';
+        
+        // 添加欢迎消息
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message bot-message';
+        messageElement.textContent = welcomeMessage;
+        chatMessages.appendChild(messageElement);
+        
+        // 将此消息添加到对话历史
+        conversationHistory.push({
+          role: "assistant",
+          content: welcomeMessage
+        });
+      }
+    }, 500);
   </script>
 </body>
 </html> 

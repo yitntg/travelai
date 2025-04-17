@@ -1,1 +1,5 @@
- 
+# 文件名: .nojekyll
+# 功能描述: 防止GitHub Pages使用Jekyll处理网站
+# 
+# 这是一个空文件，存在的目的是向GitHub Pages指示不要将此网站作为Jekyll项目处理
+# 确保所有静态文件直接按原样提供服务 
