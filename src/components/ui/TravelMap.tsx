@@ -77,7 +77,7 @@ export default function TravelMap({
         setMapLoaded(true);
       } catch (initError) {
         console.error("初始化地图时出错:", initError);
-        setMapError(`初始化地图时出错: ${initError.message}`);
+        setMapError(`初始化地图时出错: ${initError instanceof Error ? initError.message : String(initError)}`);
       }
     };
     
@@ -222,7 +222,7 @@ export default function TravelMap({
       console.log("地图标记更新完成");
     } catch (updateError) {
       console.error("更新地图标记时出错:", updateError);
-      setMapError(`更新地图标记时出错: ${updateError.message}`);
+      setMapError(`更新地图标记时出错: ${updateError instanceof Error ? updateError.message : String(updateError)}`);
     }
   }, [map, locations, activeDay, onMarkerClick, mapLoaded]);
   
