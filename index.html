@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>智能旅行规划助手</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 50px;
+      background: linear-gradient(to bottom, #EBF4FF, #FFFFFF);
+      min-height: 100vh;
+      margin: 0;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #3b82f6;
+      margin-bottom: 20px;
+    }
+    p {
+      color: #4b5563;
+      margin-bottom: 20px;
+    }
+    .button {
+      display: inline-block;
+      background-color: #3b82f6;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    .button:hover {
+      background-color: #2563eb;
+    }
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      margin: 30px 0;
+    }
+    .feature {
+      flex: 1;
+      min-width: 200px;
+      background-color: #f3f4f6;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    .feature h3 {
+      color: #3b82f6;
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>智能旅行规划助手</h1>
+    <p>通过人工智能对话，轻松规划您的完美旅行行程</p>
+    
+    <div class="features">
+      <div class="feature">
+        <h3>智能对话</h3>
+        <p>通过自然语言与AI助手交流，描述您的旅行需求和偏好。</p>
+      </div>
+      <div class="feature">
+        <h3>定制行程</h3>
+        <p>获取符合您个人喜好的行程安排，包含景点、住宿和餐饮建议。</p>
+      </div>
+      <div class="feature">
+        <h3>便捷规划</h3>
+        <p>告别繁琐的旅行攻略查询，一键获得专业级旅行规划。</p>
+      </div>
+    </div>
+    
+    <p>欢迎使用我们的应用，点击下方按钮开始规划您的旅程</p>
+    <a href="/chat/" class="button">开始规划我的旅行</a>
+  </div>
+
+  <script>
+    // 简单的页面加载动画
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.style.opacity = 0;
+      setTimeout(function() {
+        document.body.style.transition = 'opacity 1s';
+        document.body.style.opacity = 1;
+      }, 100);
+    });
+  </script>
+</body>
+</html> 
