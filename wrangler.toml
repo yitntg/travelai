@@ -1,0 +1,15 @@
+# wrangler.toml
+name = "travelai"
+type = "webpack"
+account_id = "" # 可以留空，Cloudflare会自动识别
+
+[site]
+bucket = ".next"
+entry-point = "."
+
+[build]
+command = "chmod +x cloudflare-build.sh && ./cloudflare-build.sh"
+upload.format = "service-worker"
+
+[build.upload]
+format = "service-worker" 

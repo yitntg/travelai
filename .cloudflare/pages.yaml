@@ -1,0 +1,7 @@
+name: travelai
+build:
+  command: "npm install && npm run build"
+  output_directory: ".next"
+  root_directory: "."
+  environment:
+    NODE_VERSION: 18 
