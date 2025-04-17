@@ -9,7 +9,4 @@ entry-point = "."
 
 [build]
 command = "chmod +x cloudflare-build.sh && ./cloudflare-build.sh"
-upload.format = "service-worker"
-
-[build.upload]
-format = "service-worker" 
+upload.format = "service-worker" 
