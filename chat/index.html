@@ -197,6 +197,7 @@ UI组件:
       padding: 12px 16px;
       border-radius: 12px;
       word-break: break-word;
+      white-space: pre-wrap;
     }
     .user-message {
       background-color: #3b82f6;
@@ -319,6 +320,12 @@ UI组件:
     .trip-notes-item:before {
       content: "•";
       color: #f59e0b;
+    }
+    .bot-message-formatted {
+      font-size: 14px;
+    }
+    .bot-message .bot-message-trip-tag {
+      display: none;
     }
   </style>
 </head>
@@ -484,7 +491,10 @@ UI组件:
           
           // 解析AI回复，查找行程数据
           const aiMessage = response.choices[0].message.content;
-          addMessage(aiMessage, 'bot');
+          
+          // 添加AI消息，但过滤掉JSON部分
+          const cleanedMessage = formatAIMessage(aiMessage);
+          addMessage(cleanedMessage, 'bot');
           
           // 尝试提取行程数据
           extractAndDisplayTrip(aiMessage);
@@ -507,6 +517,12 @@ UI组件:
           sendButton.disabled = false;
         }
       }
+    }
+    
+    // 辅助函数：格式化AI消息，移除JSON部分
+    function formatAIMessage(aiMessage) {
+      // 替换<trip>...</trip>部分为简洁提示
+      return aiMessage.replace(/<trip>[\s\S]*?<\/trip>/g, '[已生成行程，请查看右侧面板]');
     }
     
     // 辅助函数：添加消息到聊天界面
@@ -543,26 +559,33 @@ UI组件:
         }
       ];
       
-      // 调用API
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "deepseek-chat",
-          messages: messages,
-          temperature: 0.7,
-          max_tokens: 2000
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API请求失败: ${response.status}`);
+      try {
+        // 调用API
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "deepseek-chat",
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 2000
+          })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API错误:', errorText);
+          throw new Error(`API请求失败: ${response.status}, ${errorText}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('API调用出错:', error);
+        throw error;
       }
-      
-      return await response.json();
     }
     
     // 辅助函数：从AI回复中提取行程数据并显示
@@ -572,15 +595,25 @@ UI组件:
       
       if (tripMatch && tripMatch[1]) {
         try {
+          console.log("提取到的JSON数据:", tripMatch[1]);
+          
+          // 清理JSON字符串中可能存在的问题
+          const cleanJsonStr = tripMatch[1].trim();
+          
           // 解析JSON
-          const tripData = JSON.parse(tripMatch[1]);
+          const tripData = JSON.parse(cleanJsonStr);
           currentTrip = tripData;
+          
+          console.log("解析后的行程数据:", tripData);
           
           // 显示行程
           displayTrip(tripData);
         } catch (e) {
           console.error('解析行程JSON失败:', e);
+          console.error('原始JSON字符串:', tripMatch[1]);
         }
+      } else {
+        console.log("未找到行程数据标签");
       }
     }
     
@@ -589,35 +622,41 @@ UI组件:
       const tripDisplay = document.getElementById('tripDisplay');
       
       // 生成行程HTML
-      let html = `
-        <div class="trip-content">
-          <h3>${trip.destination} 行程规划</h3>
-          <p>${trip.duration} • ${trip.travelType}</p>
+      let html = `<div class="trip-content">`;
+      
+      // 添加标题
+      html += `
+        <h3>${trip.destination || '您的旅行'} 行程规划</h3>
+        <p>${trip.duration || ''} ${trip.travelType ? '• ' + trip.travelType : ''}</p>
       `;
       
       // 添加每天的行程
-      trip.days.forEach((day, index) => {
-        html += `
-          <div class="trip-day">
-            <div class="trip-day-title">第${index + 1}天: ${day.title}</div>
-        `;
-        
-        // 添加每天的活动
-        day.activities.forEach(activity => {
+      if (trip.days && trip.days.length > 0) {
+        trip.days.forEach((day, index) => {
           html += `
-            <div class="trip-activity">
-              <div class="trip-activity-header">
-                <div class="trip-activity-title">${activity.title}</div>
-                <div class="trip-activity-time">${activity.time}</div>
-              </div>
-              <div class="trip-activity-desc">${activity.description}</div>
-              ${activity.location ? `<div class="trip-activity-location">📍 ${activity.location}</div>` : ''}
-            </div>
+            <div class="trip-day">
+              <div class="trip-day-title">${day.title || `第${index + 1}天`}</div>
           `;
+          
+          // 添加每天的活动
+          if (day.activities && day.activities.length > 0) {
+            day.activities.forEach(activity => {
+              html += `
+                <div class="trip-activity">
+                  <div class="trip-activity-header">
+                    <div class="trip-activity-title">${activity.title || '活动'}</div>
+                    <div class="trip-activity-time">${activity.time || ''}</div>
+                  </div>
+                  ${activity.description ? `<div class="trip-activity-desc">${activity.description}</div>` : ''}
+                  ${activity.location ? `<div class="trip-activity-location">📍 ${activity.location}</div>` : ''}
+                </div>
+              `;
+            });
+          }
+          
+          html += `</div>`;
         });
-        
-        html += `</div>`;
-      });
+      }
       
       // 添加旅行提示
       if (trip.notes && trip.notes.length > 0) {
