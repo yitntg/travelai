@@ -30,7 +30,13 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <head>
-        {/* 注释掉同步脚本，改用Next.js的Script组件 */}
+        {/* Leaflet地图CSS */}
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossOrigin="anonymous"
+        />
       </head>
       <body className={inter.className}>
         <NotificationProvider>
@@ -40,15 +46,12 @@ export default function RootLayout({
             </main>
           </TravelMapProvider>
         </NotificationProvider>
-        {/* 
-          使用Next.js的Script组件异步加载百度地图API
-          注意：这是测试密钥，仅用于开发环境
-          在生产环境中，应使用您自己申请的百度地图API密钥
-        */}
+        {/* Leaflet地图JavaScript */}
         <Script
-          src="https://api.map.baidu.com/api?v=3.0&ak=rGqFAjHlqKe8hiP3GIpG1tDqeQMdjjZ8"
-          strategy="beforeInteractive"
+          src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
           crossOrigin="anonymous"
+          strategy="beforeInteractive"
         />
       </body>
     </html>
