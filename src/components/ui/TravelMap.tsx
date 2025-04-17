@@ -11,6 +11,10 @@
 'use client';
 
 import React from 'react';
+import { useEffect, useState } from 'react';
+
+// 帮助检查是否在客户端环境
+const isClient = typeof window !== 'undefined';
 
 export interface LocationPoint {
   name: string;
@@ -43,9 +47,34 @@ export default function TravelMap({
   const [mapLoaded, setMapLoaded] = React.useState(false);
   const [retryCount, setRetryCount] = React.useState(0);
   const maxRetries = 3;
+  const [domReady, setDomReady] = React.useState(false);
+  
+  // 检查DOM是否已加载
+  React.useEffect(() => {
+    if (!isClient) return; // 只在客户端执行
+    
+    setDomReady(true);
+    
+    // 调试信息
+    console.log("DOM已加载，地图容器状态:", {
+      mapRefExists: !!mapRef.current,
+      mapRefWidth: mapRef.current?.offsetWidth,
+      mapRefHeight: mapRef.current?.offsetHeight
+    });
+    
+    return () => setDomReady(false);
+  }, []);
   
   // 检查百度地图API是否加载
   React.useEffect(() => {
+    if (!isClient) return; // 只在客户端执行
+    
+    // 如果DOM未准备好，不执行初始化
+    if (!domReady) {
+      console.log("DOM未准备好，等待DOM加载完成");
+      return;
+    }
+    
     const checkBMapExists = () => {
       const exists = typeof window !== 'undefined' && window.BMap !== undefined;
       console.log(`百度地图API检查: ${exists ? '已加载' : '未加载'}`);
@@ -77,8 +106,21 @@ export default function TravelMap({
       try {
         console.log("初始化地图...");
         if (!mapRef.current) {
-          console.log("地图容器未找到");
-          setMapError("地图容器未找到");
+          console.log("地图容器未找到", {
+            domReady,
+            mapRefExists: !!mapRef.current,
+            documentReady: document.readyState
+          });
+          // 如果DOM已经准备好但仍找不到容器，可能是React渲染问题
+          // 设置一个短暂的延迟再尝试
+          setTimeout(() => {
+            if (mapRef.current) {
+              console.log("延迟后找到地图容器，开始初始化");
+              initializeMap();
+            } else {
+              setMapError("地图容器未找到 - 请尝试刷新页面");
+            }
+          }, 500);
           return;
         }
         
@@ -139,7 +181,7 @@ export default function TravelMap({
       // 清理函数
       return () => clearInterval(checkBMapInterval);
     }
-  }, [retryCount]); // 依赖retryCount，以便重试时重新运行此效果
+  }, [retryCount, domReady]); // 添加domReady作为依赖项
   
   // 更新地图标记
   React.useEffect(() => {
@@ -291,7 +333,12 @@ export default function TravelMap({
   }
   
   return (
-    <div ref={mapRef} className={`w-full h-full ${className}`}>
+    <div 
+      ref={mapRef} 
+      className={`w-full h-full ${className}`} 
+      id="baiduMap"
+      style={{ minHeight: '400px', width: '100%', position: 'relative' }}
+    >
       {!mapLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-70">
           <div className="text-center">
