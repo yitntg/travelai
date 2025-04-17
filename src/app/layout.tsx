@@ -8,6 +8,7 @@
  *   - 引入全局样式和字体
  */
 
+import React from 'react';
 import { Inter } from 'next/font/google';
 import './globals.css';
 

@@ -11,10 +11,11 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Message, Trip } from '../types';
+import { sendChatMessage } from '../services/apiService';
 
-// 示例行程数据，实际应用中会从AI响应中解析
+// 保留mockTrip作为备用数据（当API请求失败时使用）
 const mockTrip: Trip = {
   destination: '北京',
   duration: '5天4晚',
@@ -85,30 +86,16 @@ export function useChatService() {
     setLoading(true);
     
     try {
-      // 这里应该调用AI服务的API，现在使用模拟数据
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 调用API服务
+      const response = await sendChatMessage(content);
       
-      // 模拟AI响应
-      let aiResponse: Message;
-      
-      // 如果用户消息包含特定关键词，返回行程
-      if (content.toLowerCase().includes('北京') || 
-          content.toLowerCase().includes('行程') || 
-          content.toLowerCase().includes('旅游') ||
-          content.toLowerCase().includes('规划')) {
-        aiResponse = {
-          role: 'assistant',
-          content: `我已为您规划了一个5天4晚的北京旅行行程，包括故宫、天安门、长城等经典景点。您可以在右侧查看详细行程安排，如果需要调整，请告诉我您的偏好。`,
-          timestamp: Date.now(),
-          tripData: mockTrip
-        };
-      } else {
-        aiResponse = {
-          role: 'assistant',
-          content: `您好！我是您的智能旅行规划助手。请告诉我您想去的目的地、旅行天数和偏好，我可以为您生成个性化的旅行行程。例如："我想去北京旅游5天，喜欢历史和文化景点。"`,
-          timestamp: Date.now()
-        };
-      }
+      // 创建AI响应消息
+      const aiResponse: Message = {
+        role: 'assistant',
+        content: response.content,
+        timestamp: Date.now(),
+        tripData: response.tripData
+      };
       
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {

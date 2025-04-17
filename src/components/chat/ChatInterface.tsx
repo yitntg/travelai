@@ -12,7 +12,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useChatService } from '@/lib/hooks/useChatService';
 import MessageItem from './MessageItem';
 

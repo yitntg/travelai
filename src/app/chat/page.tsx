@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import ChatInterface from '@/components/chat/ChatInterface';
 import TripDisplay from '@/components/trips/TripDisplay';
 import Link from 'next/link';

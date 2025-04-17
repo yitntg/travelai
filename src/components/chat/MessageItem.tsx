@@ -10,10 +10,12 @@
 
 'use client';
 
+import React from 'react';
 import { Message } from '@/lib/types';
 
 interface MessageItemProps {
   message: Message;
+  key?: React.Key;
 }
 
 export default function MessageItem({ message }: MessageItemProps) {
