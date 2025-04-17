@@ -41,11 +41,36 @@ export default function TravelMap({
   const [polylines, setPolylines] = React.useState<any[]>([]);
   const [mapError, setMapError] = React.useState<string | null>(null);
   const [mapLoaded, setMapLoaded] = React.useState(false);
+  const [retryCount, setRetryCount] = React.useState(0);
+  const maxRetries = 3;
   
   // 检查百度地图API是否加载
   React.useEffect(() => {
     const checkBMapExists = () => {
-      return typeof window !== 'undefined' && window.BMap !== undefined;
+      const exists = typeof window !== 'undefined' && window.BMap !== undefined;
+      console.log(`百度地图API检查: ${exists ? '已加载' : '未加载'}`);
+      return exists;
+    };
+    
+    // 手动加载百度地图API
+    const loadBMapScript = () => {
+      if (typeof window === 'undefined' || document.getElementById('baidu-map-api')) {
+        return;
+      }
+      
+      console.log('手动加载百度地图API脚本');
+      const script = document.createElement('script');
+      script.id = 'baidu-map-api';
+      script.src = 'https://api.map.baidu.com/api?v=3.0&ak=rGqFAjHlqKe8hiP3GIpG1tDqeQMdjjZ8&callback=initBMap';
+      script.async = true;
+      
+      // 当脚本加载完成后初始化地图
+      window.initBMap = () => {
+        console.log('百度地图API通过手动脚本加载完成');
+        initializeMap();
+      };
+      
+      document.body.appendChild(script);
     };
     
     const initializeMap = () => {
@@ -75,6 +100,7 @@ export default function TravelMap({
         console.log("地图初始化成功");
         setMap(bmap);
         setMapLoaded(true);
+        setMapError(null); // 清除错误状态
       } catch (initError) {
         console.error("初始化地图时出错:", initError);
         setMapError(`初始化地图时出错: ${initError instanceof Error ? initError.message : String(initError)}`);
@@ -82,10 +108,19 @@ export default function TravelMap({
     };
     
     if (checkBMapExists()) {
-      console.log("百度地图API已加载");
+      console.log("百度地图API已加载，开始初始化");
       initializeMap();
     } else {
       console.log("等待百度地图API加载...");
+      
+      // 如果经过一定时间地图API仍未加载，尝试手动加载
+      setTimeout(() => {
+        if (!checkBMapExists()) {
+          console.log("百度地图API未自动加载，尝试手动加载");
+          loadBMapScript();
+        }
+      }, 2000);
+      
       const maxWaitTime = 10000; // 10秒
       const startTime = Date.now();
       
@@ -104,7 +139,7 @@ export default function TravelMap({
       // 清理函数
       return () => clearInterval(checkBMapInterval);
     }
-  }, []);
+  }, [retryCount]); // 依赖retryCount，以便重试时重新运行此效果
   
   // 更新地图标记
   React.useEffect(() => {
@@ -232,12 +267,24 @@ export default function TravelMap({
         <div className="text-red-500 text-center p-4 bg-white rounded shadow-md">
           <h3 className="font-bold mb-2">地图加载错误</h3>
           <p>{mapError}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            刷新页面
-          </button>
+          <div className="mt-4 space-y-2">
+            <button 
+              onClick={() => setRetryCount(prev => prev + 1)}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mr-2"
+              disabled={retryCount >= maxRetries}
+            >
+              {retryCount >= maxRetries ? '已达到重试上限' : '重试加载'}
+            </button>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              刷新页面
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            如果问题持续，请检查您的网络连接或浏览器设置
+          </p>
         </div>
       </div>
     );
@@ -261,5 +308,6 @@ export default function TravelMap({
 declare global {
   interface Window {
     BMap: any;
+    initBMap?: () => void;
   }
 } 

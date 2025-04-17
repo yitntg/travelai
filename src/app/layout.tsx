@@ -47,7 +47,8 @@ export default function RootLayout({
         */}
         <Script
           src="https://api.map.baidu.com/api?v=3.0&ak=rGqFAjHlqKe8hiP3GIpG1tDqeQMdjjZ8"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
+          crossOrigin="anonymous"
         />
       </body>
     </html>
