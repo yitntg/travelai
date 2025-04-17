@@ -75,12 +75,85 @@ export default function ChatPage() {
   return (
     <ErrorBoundary>
       <div className="h-screen w-full relative overflow-hidden">
-        {/* 全屏地图背景 */}
-        <div className="absolute inset-0 z-0">
-          <TravelMap 
+        {/* 全屏地图背景 - 暂时禁用地图组件，使用临时替代方案 */}
+        <div className="absolute inset-0 z-0 bg-gray-100">
+          {/* <TravelMap 
             locations={locations} 
             onMarkerClick={handleMarkerClick}
             className="w-full h-full"
+          /> */}
+          
+          {/* 临时简单地图解决方案 */}
+          <div className="w-full h-full" id="tempMap"></div>
+          
+          {/* 内联脚本用于紧急修复 */}
+          <script 
+            dangerouslySetInnerHTML={{ 
+              __html: `
+                // 等待页面完全加载
+                window.addEventListener('load', function() {
+                  // 清理可能存在的百度地图相关脚本
+                  document.querySelectorAll('script[src*="api.map.baidu.com"]').forEach(script => {
+                    try {
+                      if (script.parentNode) script.parentNode.removeChild(script);
+                    } catch (e) {}
+                  });
+                
+                  // 加载Leaflet CSS
+                  if (!document.querySelector('link[href*="leaflet.css"]')) {
+                    const css = document.createElement('link');
+                    css.rel = 'stylesheet';
+                    css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                    document.head.appendChild(css);
+                  }
+                
+                  // 加载Leaflet JS
+                  if (typeof L === 'undefined') {
+                    const script = document.createElement('script');
+                    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                    script.onload = initTempMap;
+                    document.body.appendChild(script);
+                  } else {
+                    initTempMap();
+                  }
+                
+                  // 初始化临时地图
+                  function initTempMap() {
+                    const mapContainer = document.getElementById('tempMap');
+                    if (!mapContainer) return;
+                    
+                    // 创建地图实例
+                    const map = L.map('tempMap').setView([35.86166, 104.195397], 5);
+                    
+                    // 添加OSM图层
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(map);
+                    
+                    // 添加示例标记点
+                    const markers = [
+                      { name: '故宫博物院', lat: 39.916345, lng: 116.397155, day: 1 },
+                      { name: '天安门广场', lat: 39.903524, lng: 116.397436, day: 1 },
+                      { name: '颐和园', lat: 39.991284, lng: 116.273471, day: 2 }
+                    ];
+                    
+                    // 为每个标记点添加标记
+                    markers.forEach((point, index) => {
+                      L.marker([point.lat, point.lng])
+                        .addTo(map)
+                        .bindPopup('<b>' + point.name + '</b><br>第' + point.day + '天')
+                        .openPopup();
+                    });
+                    
+                    // 自适应标记点
+                    if (markers.length > 0) {
+                      const group = new L.featureGroup(markers.map(m => L.marker([m.lat, m.lng])));
+                      map.fitBounds(group.getBounds(), { padding: [50, 50] });
+                    }
+                  }
+                });
+              `
+            }} 
           />
         </div>
         
