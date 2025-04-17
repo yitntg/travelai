@@ -4,13 +4,15 @@ type = "javascript"
 compatibility_date = "2023-12-01"
 
 [site]
-bucket = ".next"
+bucket = "./out"
 
 [build]
-command = "npm install && npm run build"
+command = "npm run build"
+upload.format = "directory"
+output_dir = "out"
 
-[build.upload]
-format = "service-worker"
+[build.environment]
+NODE_VERSION = "18"
 
-# 这是Cloudflare Pages期望的变量
-pages_build_output_dir = ".next" 
+[pages]
+pages_build_output_dir = "out" 
