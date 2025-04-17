@@ -6,7 +6,7 @@
  *   - 管理聊天消息状态
  *   - 处理消息发送和接收
  *   - 与AI服务进行通信
- *   - 模拟示例旅行行程数据
+ *   - 使用事件总线与其他组件通信
  */
 
 'use client';
@@ -14,13 +14,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Message } from '../types';
 import { sendChatMessage } from '../services/apiService';
-import { useTravelMap } from '../../contexts/TravelMapContext';
+import eventBus, { APP_EVENTS } from '../services/eventBus';
 import { LocationPoint } from '../../components/ui/TravelMap';
 
 export function useChatService() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const { setLocations, clearLocations } = useTravelMap();
   
   // 欢迎消息
   useEffect(() => {
@@ -75,18 +74,12 @@ export function useChatService() {
     setMessages(prev => [...prev, userMessage]);
     setLoading(true);
     
+    // 发布消息发送事件
+    eventBus.publish(APP_EVENTS.CHAT_MESSAGE_SENT, userMessage);
+    
     try {
       // 调用API服务
       const response = await sendChatMessage(content);
-      
-      // 处理行程数据，从中提取地理位置信息
-      if (response.tripData) {
-        const locations = extractLocationsFromTrip(response.tripData);
-        setLocations(locations);
-      } else {
-        // 如果没有行程数据，清除地图上的位置标记
-        clearLocations();
-      }
       
       // 创建AI响应消息
       const aiResponse: Message = {
@@ -97,19 +90,42 @@ export function useChatService() {
       };
       
       setMessages(prev => [...prev, aiResponse]);
+      
+      // 发布响应接收事件
+      eventBus.publish(APP_EVENTS.CHAT_RESPONSE_RECEIVED, aiResponse);
+      
+      // 如果有行程数据，提取地点并发布事件
+      if (response.tripData) {
+        const locations = extractLocationsFromTrip(response.tripData);
+        
+        // 同时触发行程生成和地点更新事件
+        eventBus.publish(APP_EVENTS.CHAT_TRIP_GENERATED, response.tripData);
+        eventBus.publish(APP_EVENTS.MAP_LOCATIONS_UPDATED, locations);
+      }
+      
     } catch (error) {
       console.error('发送消息失败:', error);
       
       // 添加错误消息
-      setMessages(prev => [...prev, {
+      const errorMessage: Message = {
         role: 'assistant',
         content: '抱歉，处理您的请求时遇到了问题。请尝试输入"我想去北京旅游5天"或"我想去上海旅游3天"来获取行程规划。',
         timestamp: Date.now()
-      }]);
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      
+      // 发布错误事件
+      eventBus.publish(APP_EVENTS.APP_ERROR, {
+        source: 'chat',
+        message: '发送消息失败',
+        error
+      });
+      
     } finally {
       setLoading(false);
     }
-  }, [extractLocationsFromTrip, setLocations, clearLocations]);
+  }, [extractLocationsFromTrip]);
 
   return {
     messages,

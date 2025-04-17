@@ -3,98 +3,133 @@
  * 功能描述: 聊天界面组件
  * 
  * 包含内容:
- *   - 用户与AI对话的聊天界面实现
- *   - 消息列表展示和输入框
- *   - 处理消息发送和接收逻辑
- *   - 空状态下的提示信息
- *   - 加载状态的处理
+ *   - 聊天消息的显示
+ *   - 用户输入和发送功能
+ *   - 消息加载状态
+ *   - 旅行行程数据的展示
+ *   - 通过事件总线与其他组件通信
  */
 
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useChatService } from '@/lib/hooks/useChatService';
-import MessageItem from './MessageItem';
+import { useChatService } from '../../lib/hooks/useChatService';
+import { Message } from '../../lib/types';
 
-interface ChatInterfaceProps {
-  onTripGenerated: (trip: any) => void;
-}
-
-export default function ChatInterface({ onTripGenerated }: ChatInterfaceProps) {
-  const [inputMessage, setInputMessage] = useState('');
+export default function ChatInterface() {
   const { messages, loading, sendMessage } = useChatService();
+  const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // 自动滚动到最新消息
+  
+  // 滚动到最新消息
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
-
-  const handleSendMessage = async (e: React.FormEvent) => {
+  
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim() || loading) return;
-
-    setInputMessage('');
-    await sendMessage(inputMessage);
+    if (!input.trim() || loading) return;
+    
+    await sendMessage(input);
+    setInput('');
   };
-
+  
   return (
-    <div className="bg-white rounded-lg shadow h-full flex flex-col">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-medium text-gray-800">与AI助手对话</h2>
-        <p className="text-sm text-gray-500">描述您的旅行计划，AI将为您生成定制行程</p>
-      </div>
-
+    <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center p-6 bg-blue-50 rounded-lg max-w-md">
-              <h3 className="font-medium text-blue-800 mb-2">开始您的旅行规划</h3>
-              <p className="text-gray-600 mb-4">试试这些问题：</p>
-              <ul className="text-left space-y-2 text-gray-700">
-                <li className="bg-white p-2 rounded border border-blue-100 hover:bg-blue-50 cursor-pointer">"我想去北京旅游5天，帮我规划行程"</li>
-                <li className="bg-white p-2 rounded border border-blue-100 hover:bg-blue-50 cursor-pointer">"帮我计划一次三亚的海滩度假"</li>
-                <li className="bg-white p-2 rounded border border-blue-100 hover:bg-blue-50 cursor-pointer">"我和家人想去云南，有什么好的景点推荐？"</li>
-              </ul>
-            </div>
-          </div>
-        ) : (
-          messages.map((msg, index) => (
-            <MessageItem 
-              key={index} 
-              message={msg} 
-            />
-          ))
-        )}
+        {messages.map((message, index) => (
+          <MessageItem key={index} message={message} />
+        ))}
         <div ref={messagesEndRef} />
       </div>
-
-      <form onSubmit={handleSendMessage} className="border-t border-gray-200 p-4">
+      
+      <form onSubmit={handleSubmit} className="border-t p-4 bg-white">
         <div className="flex items-center">
           <input
             type="text"
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="描述您的旅行计划..."
-            className="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="告诉我您想去哪里旅行，如：我想去北京玩5天..."
+            className="flex-1 border rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
             disabled={loading}
           />
           <button
             type="submit"
-            className={`bg-blue-600 text-white px-4 py-2 rounded-r-lg ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+            className={`bg-blue-600 text-white px-4 py-2 rounded-r-lg ${
+              loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+            }`}
             disabled={loading}
           >
             {loading ? (
-              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            ) : (
-              '发送'
-            )}
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                处理中
+              </span>
+            ) : '发送'}
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// 内联消息项组件
+function MessageItem({ message }: { message: Message }) {
+  const isUser = message.role === 'user';
+  
+  // 渲染旅行行程数据
+  const renderTripData = () => {
+    if (!message.tripData) return null;
+    
+    const { destination, duration, days } = message.tripData;
+    
+    return (
+      <div className="mt-2 bg-blue-50 p-3 rounded-lg">
+        <div className="font-semibold text-blue-800 mb-1">
+          {destination} · {duration}
+        </div>
+        
+        <div className="space-y-2 mt-2">
+          {days && days.slice(0, 2).map((day: any, index: number) => (
+            <div key={index} className="border-l-2 border-blue-300 pl-2">
+              <div className="font-medium">Day {index + 1}: {day.title}</div>
+              <div className="text-xs text-gray-600 pl-1">
+                {day.activities && day.activities.slice(0, 2).map((activity: any, i: number) => (
+                  <div key={i} className="mt-1">· {activity.title}</div>
+                ))}
+                {day.activities && day.activities.length > 2 && (
+                  <div className="mt-1 text-blue-500">... 更多景点</div>
+                )}
+              </div>
+            </div>
+          ))}
+          {days && days.length > 2 && (
+            <div className="text-center text-blue-500 text-sm mt-1">
+              查看完整行程 →
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+  
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div
+        className={`max-w-3/4 rounded-lg px-4 py-2 ${
+          isUser
+            ? 'bg-blue-600 text-white rounded-br-none'
+            : 'bg-gray-100 text-gray-800 rounded-bl-none'
+        }`}
+      >
+        <div className="whitespace-pre-wrap">{message.content}</div>
+        {renderTripData()}
+      </div>
     </div>
   );
 } 

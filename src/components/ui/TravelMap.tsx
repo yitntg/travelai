@@ -3,18 +3,16 @@
  * 功能描述: 全屏旅行地图组件
  * 
  * 包含内容:
- *   - 百度地图作为全屏背景
+ *   - Leaflet地图作为全屏背景
  *   - 支持旅行地点标记
  *   - 支持路线连接和多日行程展示
+ *   - 通过事件总线接收位置更新
  */
 
 'use client';
 
-import React from 'react';
-import { useEffect, useState } from 'react';
-
-// 帮助检查是否在客户端环境
-const isClient = typeof window !== 'undefined';
+import React, { useEffect, useRef, useState } from 'react';
+import eventBus, { APP_EVENTS } from '../../lib/services/eventBus';
 
 export interface LocationPoint {
   name: string;
@@ -27,176 +25,169 @@ export interface LocationPoint {
 }
 
 interface TravelMapProps {
-  locations: LocationPoint[];
+  locations?: LocationPoint[];
   activeDay?: number;
   onMarkerClick?: (location: LocationPoint) => void;
   className?: string;
+  autoUpdateFromEvents?: boolean; // 是否自动从事件总线接收更新
 }
 
 export default function TravelMap({ 
   locations = [], 
   activeDay,
   onMarkerClick,
-  className = ''
+  className = '',
+  autoUpdateFromEvents = true
 }: TravelMapProps) {
-  const mapRef = React.useRef<HTMLDivElement>(null);
-  const [map, setMap] = React.useState<any>(null);
-  const [markers, setMarkers] = React.useState<any[]>([]);
-  const [polylines, setPolylines] = React.useState<any[]>([]);
-  const [mapError, setMapError] = React.useState<string | null>(null);
-  const [mapLoaded, setMapLoaded] = React.useState(false);
-  const [retryCount, setRetryCount] = React.useState(0);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [markers, setMarkers] = useState<any[]>([]);
+  const [polylines, setPolylines] = useState<any[]>([]);
+  const [retryCount, setRetryCount] = useState(0);
+  const [mapLocations, setMapLocations] = useState<LocationPoint[]>(locations);
+  const mapInstance = useRef<any>(null);
   const maxRetries = 3;
-  const [domReady, setDomReady] = React.useState(false);
   
-  // 检查DOM是否已加载
-  React.useEffect(() => {
-    if (!isClient) return; // 只在客户端执行
+  // 从事件总线接收位置更新
+  useEffect(() => {
+    if (!autoUpdateFromEvents) return;
     
-    setDomReady(true);
-    
-    // 调试信息
-    console.log("DOM已加载，地图容器状态:", {
-      mapRefExists: !!mapRef.current,
-      mapRefWidth: mapRef.current?.offsetWidth,
-      mapRefHeight: mapRef.current?.offsetHeight
+    const unsubscribe = eventBus.subscribe(APP_EVENTS.MAP_LOCATIONS_UPDATED, (updatedLocations: LocationPoint[]) => {
+      console.log("从事件总线接收到地点更新:", updatedLocations);
+      setMapLocations(updatedLocations);
     });
     
-    return () => setDomReady(false);
-  }, []);
-  
-  // 检查百度地图API是否加载
-  React.useEffect(() => {
-    if (!isClient) return; // 只在客户端执行
-    
-    // 如果DOM未准备好，不执行初始化
-    if (!domReady) {
-      console.log("DOM未准备好，等待DOM加载完成");
-      return;
-    }
-    
-    const checkBMapExists = () => {
-      const exists = typeof window !== 'undefined' && window.BMap !== undefined;
-      console.log(`百度地图API检查: ${exists ? '已加载' : '未加载'}`);
-      return exists;
+    return () => {
+      unsubscribe();
     };
+  }, [autoUpdateFromEvents]);
+  
+  // 当props中的locations变化时更新内部状态
+  useEffect(() => {
+    if (locations.length > 0) {
+      setMapLocations(locations);
+    }
+  }, [locations]);
+  
+  // 初始化地图
+  useEffect(() => {
+    if (!mapRef.current) return;
     
-    // 手动加载百度地图API
-    const loadBMapScript = () => {
-      if (typeof window === 'undefined' || document.getElementById('baidu-map-api')) {
+    try {
+      console.log("初始化Leaflet地图...");
+      
+      // 检查Leaflet是否可用
+      if (typeof window === 'undefined' || !window.L) {
+        console.error("Leaflet库未加载，手动加载");
+        
+        // 添加Leaflet CSS
+        const linkEl = document.createElement('link');
+        linkEl.rel = 'stylesheet';
+        linkEl.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(linkEl);
+        
+        // 添加Leaflet JS
+        const scriptEl = document.createElement('script');
+        scriptEl.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        scriptEl.onload = () => {
+          console.log("Leaflet已手动加载");
+          initializeMap();
+        };
+        document.body.appendChild(scriptEl);
         return;
       }
       
-      console.log('手动加载百度地图API脚本');
-      const script = document.createElement('script');
-      script.id = 'baidu-map-api';
-      script.src = 'https://api.map.baidu.com/api?v=3.0&ak=rGqFAjHlqKe8hiP3GIpG1tDqeQMdjjZ8&callback=initBMap';
-      script.async = true;
+      initializeMap();
+    } catch (error) {
+      console.error("初始化地图时出错:", error);
+      setMapError(`初始化地图时出错: ${error instanceof Error ? error.message : String(error)}`);
       
-      // 当脚本加载完成后初始化地图
-      window.initBMap = () => {
-        console.log('百度地图API通过手动脚本加载完成');
-        initializeMap();
-      };
-      
-      document.body.appendChild(script);
-    };
+      // 报告错误到事件总线
+      eventBus.publish(APP_EVENTS.APP_ERROR, {
+        source: 'map',
+        message: '初始化地图时出错',
+        error
+      });
+    }
     
-    const initializeMap = () => {
+    // 内部初始化函数
+    function initializeMap() {
+      if (!mapRef.current || !window.L) return;
+      
+      // 清理已有地图实例
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+      }
+      
+      // 创建新地图
       try {
-        console.log("初始化地图...");
-        if (!mapRef.current) {
-          console.log("地图容器未找到", {
-            domReady,
-            mapRefExists: !!mapRef.current,
-            documentReady: document.readyState
-          });
-          // 如果DOM已经准备好但仍找不到容器，可能是React渲染问题
-          // 设置一个短暂的延迟再尝试
-          setTimeout(() => {
-            if (mapRef.current) {
-              console.log("延迟后找到地图容器，开始初始化");
-              initializeMap();
-            } else {
-              setMapError("地图容器未找到 - 请尝试刷新页面");
-            }
-          }, 500);
-          return;
-        }
+        const map = window.L.map(mapRef.current).setView([35.86166, 104.195397], 5);
         
-        const bmap = new window.BMap.Map(mapRef.current);
-        // 默认中心点设为中国中心
-        const point = new window.BMap.Point(104.195397, 35.86166);
-        bmap.centerAndZoom(point, 5);
-        bmap.enableScrollWheelZoom();
+        // 添加地图图层
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
         
-        // 添加地图控件
-        try {
-          bmap.addControl(new window.BMap.NavigationControl());
-          bmap.addControl(new window.BMap.ScaleControl());
-          bmap.addControl(new window.BMap.MapTypeControl());
-        } catch (controlError) {
-          console.error("添加地图控件时出错:", controlError);
-        }
+        // 保存地图实例
+        mapInstance.current = map;
+        setMapLoaded(true);
+        setMapError(null);
         
         console.log("地图初始化成功");
-        setMap(bmap);
-        setMapLoaded(true);
-        setMapError(null); // 清除错误状态
+        
+        // 通知地图加载完成
+        eventBus.publish(APP_EVENTS.APP_READY, { component: 'map' });
+        
+        // 如果有位置数据，立即更新标记
+        if (mapLocations.length > 0) {
+          updateMarkers(map, mapLocations);
+        }
       } catch (initError) {
-        console.error("初始化地图时出错:", initError);
-        setMapError(`初始化地图时出错: ${initError instanceof Error ? initError.message : String(initError)}`);
+        console.error("创建地图实例失败:", initError);
+        setMapError(`创建地图失败: ${initError instanceof Error ? initError.message : String(initError)}`);
+        
+        // 报告错误到事件总线
+        eventBus.publish(APP_EVENTS.APP_ERROR, {
+          source: 'map',
+          message: '创建地图实例失败',
+          error: initError
+        });
+      }
+    }
+    
+    // 组件卸载时清理
+    return () => {
+      if (mapInstance.current) {
+        console.log("清理地图资源");
+        mapInstance.current.remove();
+        mapInstance.current = null;
       }
     };
-    
-    if (checkBMapExists()) {
-      console.log("百度地图API已加载，开始初始化");
-      initializeMap();
-    } else {
-      console.log("等待百度地图API加载...");
-      
-      // 如果经过一定时间地图API仍未加载，尝试手动加载
-      setTimeout(() => {
-        if (!checkBMapExists()) {
-          console.log("百度地图API未自动加载，尝试手动加载");
-          loadBMapScript();
-        }
-      }, 2000);
-      
-      const maxWaitTime = 10000; // 10秒
-      const startTime = Date.now();
-      
-      const checkBMapInterval = setInterval(() => {
-        if (checkBMapExists()) {
-          console.log("百度地图API已加载，开始初始化");
-          clearInterval(checkBMapInterval);
-          initializeMap();
-        } else if (Date.now() - startTime > maxWaitTime) {
-          clearInterval(checkBMapInterval);
-          console.error("百度地图API加载超时");
-          setMapError("百度地图API加载失败，请检查网络连接或刷新页面");
-        }
-      }, 500);
-      
-      // 清理函数
-      return () => clearInterval(checkBMapInterval);
-    }
-  }, [retryCount, domReady]); // 添加domReady作为依赖项
+  }, [retryCount, mapLocations]);
   
   // 更新地图标记
-  React.useEffect(() => {
-    if (!map || locations.length === 0 || !mapLoaded) return;
-    
+  useEffect(() => {
+    if (!mapInstance.current || !mapLoaded || mapLocations.length === 0) return;
+    updateMarkers(mapInstance.current, mapLocations);
+  }, [mapLocations, activeDay, onMarkerClick, mapLoaded]);
+  
+  // 更新标记的函数
+  function updateMarkers(map: any, locations: LocationPoint[]) {
     try {
-      console.log("更新地图标记...", locations);
+      console.log("更新地图标记...");
       
       // 清除现有标记和线条
-      markers.forEach(marker => map.removeOverlay(marker));
-      polylines.forEach(line => map.removeOverlay(line));
+      markers.forEach(marker => {
+        if (marker && marker.remove) marker.remove();
+      });
+      polylines.forEach(line => {
+        if (line && line.remove) line.remove();
+      });
       
       const newMarkers: any[] = [];
       const newPolylines: any[] = [];
-      const bounds = new window.BMap.Bounds();
+      const points: any[] = [];
       
       // 按天数分组
       const locationsByDay = locations.reduce((acc, location) => {
@@ -228,80 +219,69 @@ export default function TravelMap({
       
       // 添加标记和线条
       Object.entries(locationsByDay).forEach(([day, dayLocations]) => {
-        const dayIndex = Number(day) % dayColors.length;
-        const color = activeDay ? (Number(day) === activeDay ? dayColors[dayIndex] : '#AAAAAA') : dayColors[dayIndex];
+        if (activeDay !== undefined && Number(day) !== activeDay) return;
         
-        if (activeDay && Number(day) !== activeDay) return;
+        const dayIndex = Number(day) % dayColors.length;
+        const color = dayColors[dayIndex];
         
         // 添加地点标记
         dayLocations.forEach((location, index) => {
           try {
-            const point = new window.BMap.Point(location.lng, location.lat);
-            bounds.extend(point);
+            const latlng = window.L.latLng(location.lat, location.lng);
+            points.push(latlng);
             
             // 创建标记
-            const marker = new window.BMap.Marker(point, {
-              icon: new window.BMap.Symbol('circle', {
-                scale: 1,
-                fillColor: color,
-                fillOpacity: 0.8,
-                strokeColor: '#FFFFFF'
-              })
+            const marker = window.L.marker(latlng)
+              .addTo(map)
+              .bindPopup(`<b>${location.name}</b><br>第${day}天 - 第${index+1}个景点`);
+            
+            // 点击事件处理
+            marker.on('click', () => {
+              // 发布标记点击事件
+              eventBus.publish(APP_EVENTS.MAP_LOCATION_SELECTED, location);
+              // 调用回调函数（如果有）
+              if (onMarkerClick) onMarkerClick(location);
             });
             
-            // 添加标签
-            const label = new window.BMap.Label(`Day${day}-${index+1}: ${location.name}`, {
-              offset: new window.BMap.Size(20, 0)
-            });
-            marker.setLabel(label);
-            
-            // 添加点击事件
-            if (onMarkerClick) {
-              marker.addEventListener('click', () => {
-                onMarkerClick(location);
-              });
-            }
-            
-            map.addOverlay(marker);
             newMarkers.push(marker);
             
             // 如果不是当天最后一个地点，添加到下一个地点的线
             if (index < dayLocations.length - 1) {
               const nextLocation = dayLocations[index + 1];
-              const nextPoint = new window.BMap.Point(nextLocation.lng, nextLocation.lat);
+              const nextLatLng = window.L.latLng(nextLocation.lat, nextLocation.lng);
               
-              const polyline = new window.BMap.Polyline([point, nextPoint], {
-                strokeColor: color,
-                strokeWeight: 3,
-                strokeOpacity: 0.8
-              });
+              const line = window.L.polyline([latlng, nextLatLng], {
+                color: color,
+                weight: 3
+              }).addTo(map);
               
-              map.addOverlay(polyline);
-              newPolylines.push(polyline);
+              newPolylines.push(line);
             }
-          } catch (markerError) {
-            console.error("创建标记时出错:", markerError);
+          } catch (err) {
+            console.error("添加标记时出错:", err);
           }
         });
       });
       
-      // 调整地图视图以显示所有标记
-      if (newMarkers.length > 0) {
-        try {
-          map.setViewport(bounds);
-        } catch (viewportError) {
-          console.error("设置视图范围时出错:", viewportError);
-        }
+      // 自动调整视图
+      if (points.length > 0) {
+        const bounds = window.L.latLngBounds(points);
+        map.fitBounds(bounds, { padding: [50, 50] });
       }
       
       setMarkers(newMarkers);
       setPolylines(newPolylines);
-      console.log("地图标记更新完成");
     } catch (updateError) {
-      console.error("更新地图标记时出错:", updateError);
-      setMapError(`更新地图标记时出错: ${updateError instanceof Error ? updateError.message : String(updateError)}`);
+      console.error("更新标记时出错:", updateError);
+      
+      // 报告错误到事件总线
+      eventBus.publish(APP_EVENTS.APP_ERROR, {
+        source: 'map',
+        message: '更新标记时出错',
+        error: updateError
+      });
     }
-  }, [map, locations, activeDay, onMarkerClick, mapLoaded]);
+  }
   
   if (mapError) {
     return (
@@ -324,9 +304,6 @@ export default function TravelMap({
               刷新页面
             </button>
           </div>
-          <p className="mt-2 text-xs text-gray-500">
-            如果问题持续，请检查您的网络连接或浏览器设置
-          </p>
         </div>
       </div>
     );
@@ -335,9 +312,8 @@ export default function TravelMap({
   return (
     <div 
       ref={mapRef} 
-      className={`w-full h-full ${className}`} 
-      id="baiduMap"
-      style={{ minHeight: '400px', width: '100%', position: 'relative' }}
+      className={`w-full h-full ${className}`}
+      style={{ minHeight: '400px', width: '100%' }}
     >
       {!mapLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-70">
@@ -351,10 +327,9 @@ export default function TravelMap({
   );
 }
 
-// 为了TypeScript支持百度地图API
+// 全局类型定义
 declare global {
   interface Window {
-    BMap: any;
-    initBMap?: () => void;
+    L: any;
   }
 } 
