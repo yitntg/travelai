@@ -1,6 +1,6 @@
 name: travelai
 build:
-  command: npm install && npm run build
+  command: sh ./build.sh
   output_directory: .next
   root_directory: .
   environment:

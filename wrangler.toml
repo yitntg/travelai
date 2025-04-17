@@ -1,12 +1,16 @@
 # wrangler.toml
 name = "travelai"
-type = "webpack"
-account_id = "" # 可以留空，Cloudflare会自动识别
+type = "javascript"
+compatibility_date = "2023-12-01"
 
 [site]
 bucket = ".next"
-entry-point = "."
 
 [build]
-command = "chmod +x cloudflare-build.sh && ./cloudflare-build.sh"
-upload.format = "service-worker" 
+command = "npm install && npm run build"
+
+[build.upload]
+format = "service-worker"
+
+# 这是Cloudflare Pages期望的变量
+pages_build_output_dir = ".next" 
