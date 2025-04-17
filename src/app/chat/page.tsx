@@ -7,21 +7,83 @@
  *   - 集成聊天界面和行程展示组件
  *   - 管理生成的行程数据状态
  *   - 响应式布局适配不同设备
+ *   - 全屏地图背景与悬浮聊天框
  */
 
 'use client';
 
-import React, { useState } from 'react';
-import ChatInterface from '@/components/chat/ChatInterface';
-import TripDisplay from '@/components/trips/TripDisplay';
+import React from 'react';
+import ChatInterface from '../../components/chat/ChatInterface';
+import TripDisplay from '../../components/trips/TripDisplay';
+import TravelMap from '../../components/ui/TravelMap';
 import Link from 'next/link';
+import { useTravelMap } from '../../contexts/TravelMapContext';
+import { LocationPoint } from '../../components/ui/TravelMap';
+
+// 示例地点数据，实际应用中应从AI响应中提取
+const SAMPLE_LOCATIONS: LocationPoint[] = [
+  {
+    name: '故宫博物院',
+    address: '北京市东城区景山前街4号',
+    lat: 39.916345,
+    lng: 116.397155,
+    day: 1,
+    description: '中国明清两代的皇家宫殿，世界上现存规模最大、保存最为完整的木质结构古建筑之一',
+    order: 1
+  },
+  {
+    name: '天安门广场',
+    address: '北京市东城区东长安街',
+    lat: 39.903524,
+    lng: 116.397436,
+    day: 1,
+    description: '中华人民共和国的象征，世界上最大的城市广场之一',
+    order: 2
+  },
+  {
+    name: '颐和园',
+    address: '北京市海淀区新建宫门路19号',
+    lat: 39.991284,
+    lng: 116.273471,
+    day: 2,
+    description: '中国清代的皇家园林，以昆明湖、万寿山为基址，以杭州西湖为蓝本',
+    order: 1
+  }
+];
 
 export default function ChatPage() {
-  const [currentTrip, setCurrentTrip] = useState(null);
+  const [currentTrip, setCurrentTrip] = React.useState<any>(null);
+  const [isChatMinimized, setIsChatMinimized] = React.useState(false);
+  const { locations, setLocations } = useTravelMap();
+  const [selectedLocation, setSelectedLocation] = React.useState<LocationPoint | null>(null);
+
+  // 示例：加载示例数据
+  React.useEffect(() => {
+    // 实际应用中，这里应从AI响应中提取地点信息
+    setLocations(SAMPLE_LOCATIONS);
+  }, [setLocations]);
+
+  const toggleChatSize = () => {
+    setIsChatMinimized(!isChatMinimized);
+  };
+
+  const handleMarkerClick = (location: LocationPoint) => {
+    setSelectedLocation(location);
+  };
 
   return (
-    <div className="container mx-auto p-4 flex flex-col h-screen">
-      <header className="py-4 border-b border-gray-200">
+    <div className="h-screen w-full relative overflow-hidden">
+      {/* 全屏地图背景 */}
+      <div className="absolute inset-0 z-0">
+        <TravelMap 
+          locations={locations} 
+          onMarkerClick={handleMarkerClick}
+          className="w-full h-full"
+        />
+      </div>
+      
+      {/* 顶部导航栏 - 半透明 */}
+      <div className="absolute top-0 left-0 right-0 bg-white bg-opacity-80 z-10 px-4 py-2 shadow-md">
         <div className="flex items-center justify-between">
           <Link href="/" className="text-blue-600 hover:text-blue-800 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -30,19 +92,62 @@ export default function ChatPage() {
             返回首页
           </Link>
           <h1 className="text-xl font-semibold text-blue-800">智能旅行规划助手</h1>
-          <div className="w-24"></div> {/* 占位元素，保持标题居中 */}
-        </div>
-      </header>
-      
-      <div className="flex-1 flex flex-col md:flex-row gap-4 my-4 overflow-hidden">
-        <div className="w-full md:w-1/2 flex flex-col">
-          <ChatInterface onTripGenerated={setCurrentTrip} />
-        </div>
-        
-        <div className="w-full md:w-1/2 bg-white rounded-lg shadow overflow-hidden flex flex-col">
-          <TripDisplay trip={currentTrip} />
+          <button 
+            onClick={toggleChatSize}
+            className="p-2 bg-blue-100 hover:bg-blue-200 rounded-full"
+          >
+            {isChatMinimized ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
+      
+      {/* 右侧悬浮聊天界面 */}
+      <div className={`absolute right-4 top-16 bottom-4 z-20 transition-all duration-300 ${isChatMinimized ? 'w-16' : 'w-1/3'}`}>
+        <div className={`bg-white rounded-lg shadow-lg h-full flex flex-col overflow-hidden ${isChatMinimized ? 'p-2' : ''}`}>
+          {isChatMinimized ? (
+            <button 
+              onClick={toggleChatSize}
+              className="w-full h-full flex items-center justify-center text-blue-600 hover:text-blue-800"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </button>
+          ) : (
+            <ChatInterface onTripGenerated={setCurrentTrip} />
+          )}
+        </div>
+      </div>
+      
+      {/* 地点详情弹窗 */}
+      {selectedLocation && (
+        <div className="absolute left-4 bottom-4 z-20 bg-white rounded-lg shadow-lg p-4 max-w-md">
+          <div className="flex justify-between items-start mb-2">
+            <h3 className="text-lg font-semibold text-blue-800">{selectedLocation.name}</h3>
+            <button 
+              onClick={() => setSelectedLocation(null)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          <p className="text-gray-600 text-sm mb-2">{selectedLocation.address}</p>
+          <p className="text-gray-800 mb-2">{selectedLocation.description}</p>
+          <div className="bg-blue-50 px-2 py-1 rounded text-sm text-blue-800 inline-block">
+            第{selectedLocation.day}天 · 第{selectedLocation.order}个景点
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

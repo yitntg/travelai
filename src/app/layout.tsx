@@ -11,6 +11,8 @@
 import React from 'react';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { NotificationProvider } from '../contexts/NotificationContext';
+import { TravelMapProvider } from '../contexts/TravelMapContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -26,10 +28,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
+      <head>
+        {/* 
+          注意：这是测试密钥，仅用于开发环境
+          在生产环境中，应使用您自己申请的百度地图API密钥
+          请访问 http://lbsyun.baidu.com/ 申请
+        */}
+        <script type="text/javascript" src="https://api.map.baidu.com/api?v=3.0&ak=rGqFAjHlqKe8hiP3GIpG1tDqeQMdjjZ8"></script>
+      </head>
       <body className={inter.className}>
-        <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-          {children}
-        </main>
+        <NotificationProvider>
+          <TravelMapProvider>
+            <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+              {children}
+            </main>
+          </TravelMapProvider>
+        </NotificationProvider>
       </body>
     </html>
   );
