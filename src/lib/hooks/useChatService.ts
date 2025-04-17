@@ -15,6 +15,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Message } from '../types';
 import { sendChatMessage } from '../services/apiService';
 import { useTravelMap } from '../../contexts/TravelMapContext';
+import { LocationPoint } from '../../components/ui/TravelMap';
 
 export function useChatService() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -36,7 +37,7 @@ export function useChatService() {
   const extractLocationsFromTrip = useCallback((tripData: any) => {
     if (!tripData || !tripData.days) return [];
 
-    const locations = [];
+    const locations: LocationPoint[] = [];
     
     tripData.days.forEach((day: any, dayIndex: number) => {
       if (day.activities) {
