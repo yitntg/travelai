@@ -1,7 +1,7 @@
 name: travelai
 build:
   command: sh ./build.sh
-  output_directory: .next
+  output_directory: out
   root_directory: .
   environment:
     NODE_VERSION: 18 
