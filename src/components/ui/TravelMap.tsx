@@ -39,12 +39,24 @@ export default function TravelMap({
   const [map, setMap] = React.useState<any>(null);
   const [markers, setMarkers] = React.useState<any[]>([]);
   const [polylines, setPolylines] = React.useState<any[]>([]);
+  const [mapError, setMapError] = React.useState<string | null>(null);
+  const [mapLoaded, setMapLoaded] = React.useState(false);
   
-  // 初始化地图
+  // 检查百度地图API是否加载
   React.useEffect(() => {
-    if (typeof window !== 'undefined' && mapRef.current && !map) {
-      // 等待百度地图加载完成
-      if (window.BMap) {
+    const checkBMapExists = () => {
+      return typeof window !== 'undefined' && window.BMap !== undefined;
+    };
+    
+    const initializeMap = () => {
+      try {
+        console.log("初始化地图...");
+        if (!mapRef.current) {
+          console.log("地图容器未找到");
+          setMapError("地图容器未找到");
+          return;
+        }
+        
         const bmap = new window.BMap.Map(mapRef.current);
         // 默认中心点设为中国中心
         const point = new window.BMap.Point(104.195397, 35.86166);
@@ -52,138 +64,196 @@ export default function TravelMap({
         bmap.enableScrollWheelZoom();
         
         // 添加地图控件
-        bmap.addControl(new window.BMap.NavigationControl());
-        bmap.addControl(new window.BMap.ScaleControl());
-        bmap.addControl(new window.BMap.MapTypeControl());
+        try {
+          bmap.addControl(new window.BMap.NavigationControl());
+          bmap.addControl(new window.BMap.ScaleControl());
+          bmap.addControl(new window.BMap.MapTypeControl());
+        } catch (controlError) {
+          console.error("添加地图控件时出错:", controlError);
+        }
         
+        console.log("地图初始化成功");
         setMap(bmap);
-      } else {
-        // 百度地图未加载完成，等待加载
-        const checkBMap = setInterval(() => {
-          if (window.BMap) {
-            clearInterval(checkBMap);
-            const bmap = new window.BMap.Map(mapRef.current);
-            const point = new window.BMap.Point(104.195397, 35.86166);
-            bmap.centerAndZoom(point, 5);
-            bmap.enableScrollWheelZoom();
-            
-            bmap.addControl(new window.BMap.NavigationControl());
-            bmap.addControl(new window.BMap.ScaleControl());
-            bmap.addControl(new window.BMap.MapTypeControl());
-            
-            setMap(bmap);
-          }
-        }, 100);
+        setMapLoaded(true);
+      } catch (initError) {
+        console.error("初始化地图时出错:", initError);
+        setMapError(`初始化地图时出错: ${initError.message}`);
       }
+    };
+    
+    if (checkBMapExists()) {
+      console.log("百度地图API已加载");
+      initializeMap();
+    } else {
+      console.log("等待百度地图API加载...");
+      const maxWaitTime = 10000; // 10秒
+      const startTime = Date.now();
+      
+      const checkBMapInterval = setInterval(() => {
+        if (checkBMapExists()) {
+          console.log("百度地图API已加载，开始初始化");
+          clearInterval(checkBMapInterval);
+          initializeMap();
+        } else if (Date.now() - startTime > maxWaitTime) {
+          clearInterval(checkBMapInterval);
+          console.error("百度地图API加载超时");
+          setMapError("百度地图API加载失败，请检查网络连接或刷新页面");
+        }
+      }, 500);
+      
+      // 清理函数
+      return () => clearInterval(checkBMapInterval);
     }
   }, []);
   
   // 更新地图标记
   React.useEffect(() => {
-    if (!map || locations.length === 0) return;
+    if (!map || locations.length === 0 || !mapLoaded) return;
     
-    // 清除现有标记和线条
-    markers.forEach(marker => map.removeOverlay(marker));
-    polylines.forEach(line => map.removeOverlay(line));
-    
-    const newMarkers: any[] = [];
-    const newPolylines: any[] = [];
-    const bounds = new window.BMap.Bounds();
-    
-    // 按天数分组
-    const locationsByDay = locations.reduce((acc, location) => {
-      if (!acc[location.day]) {
-        acc[location.day] = [];
-      }
-      acc[location.day].push(location);
-      return acc;
-    }, {} as Record<number, LocationPoint[]>);
-    
-    // 每天的地点按顺序排列
-    Object.keys(locationsByDay).forEach(day => {
-      locationsByDay[Number(day)].sort((a, b) => a.order - b.order);
-    });
-    
-    // 日期对应的颜色
-    const dayColors = [
-      '#FF4136', // 红色
-      '#0074D9', // 蓝色
-      '#2ECC40', // 绿色
-      '#FF851B', // 橙色
-      '#B10DC9', // 紫色
-      '#39CCCC', // 青色
-      '#FFDC00', // 黄色
-      '#F012BE', // 粉色
-      '#01FF70', // 亮绿色
-      '#85144b', // 梅红色
-    ];
-    
-    // 添加标记和线条
-    Object.entries(locationsByDay).forEach(([day, dayLocations]) => {
-      const dayIndex = Number(day) % dayColors.length;
-      const color = activeDay ? (Number(day) === activeDay ? dayColors[dayIndex] : '#AAAAAA') : dayColors[dayIndex];
+    try {
+      console.log("更新地图标记...", locations);
       
-      if (activeDay && Number(day) !== activeDay) return;
+      // 清除现有标记和线条
+      markers.forEach(marker => map.removeOverlay(marker));
+      polylines.forEach(line => map.removeOverlay(line));
       
-      // 添加地点标记
-      dayLocations.forEach((location, index) => {
-        const point = new window.BMap.Point(location.lng, location.lat);
-        bounds.extend(point);
-        
-        // 创建标记
-        const marker = new window.BMap.Marker(point, {
-          icon: new window.BMap.Symbol('circle', {
-            scale: 1,
-            fillColor: color,
-            fillOpacity: 0.8,
-            strokeColor: '#FFFFFF'
-          })
-        });
-        
-        // 添加标签
-        const label = new window.BMap.Label(`Day${day}-${index+1}: ${location.name}`, {
-          offset: new window.BMap.Size(20, 0)
-        });
-        marker.setLabel(label);
-        
-        // 添加点击事件
-        if (onMarkerClick) {
-          marker.addEventListener('click', () => {
-            onMarkerClick(location);
-          });
+      const newMarkers: any[] = [];
+      const newPolylines: any[] = [];
+      const bounds = new window.BMap.Bounds();
+      
+      // 按天数分组
+      const locationsByDay = locations.reduce((acc, location) => {
+        if (!acc[location.day]) {
+          acc[location.day] = [];
         }
-        
-        map.addOverlay(marker);
-        newMarkers.push(marker);
-        
-        // 如果不是当天最后一个地点，添加到下一个地点的线
-        if (index < dayLocations.length - 1) {
-          const nextLocation = dayLocations[index + 1];
-          const nextPoint = new window.BMap.Point(nextLocation.lng, nextLocation.lat);
-          
-          const polyline = new window.BMap.Polyline([point, nextPoint], {
-            strokeColor: color,
-            strokeWeight: 3,
-            strokeOpacity: 0.8
-          });
-          
-          map.addOverlay(polyline);
-          newPolylines.push(polyline);
-        }
+        acc[location.day].push(location);
+        return acc;
+      }, {} as Record<number, LocationPoint[]>);
+      
+      // 每天的地点按顺序排列
+      Object.keys(locationsByDay).forEach(day => {
+        locationsByDay[Number(day)].sort((a, b) => a.order - b.order);
       });
-    });
-    
-    // 调整地图视图以显示所有标记
-    if (newMarkers.length > 0) {
-      map.setViewport(bounds);
+      
+      // 日期对应的颜色
+      const dayColors = [
+        '#FF4136', // 红色
+        '#0074D9', // 蓝色
+        '#2ECC40', // 绿色
+        '#FF851B', // 橙色
+        '#B10DC9', // 紫色
+        '#39CCCC', // 青色
+        '#FFDC00', // 黄色
+        '#F012BE', // 粉色
+        '#01FF70', // 亮绿色
+        '#85144b', // 梅红色
+      ];
+      
+      // 添加标记和线条
+      Object.entries(locationsByDay).forEach(([day, dayLocations]) => {
+        const dayIndex = Number(day) % dayColors.length;
+        const color = activeDay ? (Number(day) === activeDay ? dayColors[dayIndex] : '#AAAAAA') : dayColors[dayIndex];
+        
+        if (activeDay && Number(day) !== activeDay) return;
+        
+        // 添加地点标记
+        dayLocations.forEach((location, index) => {
+          try {
+            const point = new window.BMap.Point(location.lng, location.lat);
+            bounds.extend(point);
+            
+            // 创建标记
+            const marker = new window.BMap.Marker(point, {
+              icon: new window.BMap.Symbol('circle', {
+                scale: 1,
+                fillColor: color,
+                fillOpacity: 0.8,
+                strokeColor: '#FFFFFF'
+              })
+            });
+            
+            // 添加标签
+            const label = new window.BMap.Label(`Day${day}-${index+1}: ${location.name}`, {
+              offset: new window.BMap.Size(20, 0)
+            });
+            marker.setLabel(label);
+            
+            // 添加点击事件
+            if (onMarkerClick) {
+              marker.addEventListener('click', () => {
+                onMarkerClick(location);
+              });
+            }
+            
+            map.addOverlay(marker);
+            newMarkers.push(marker);
+            
+            // 如果不是当天最后一个地点，添加到下一个地点的线
+            if (index < dayLocations.length - 1) {
+              const nextLocation = dayLocations[index + 1];
+              const nextPoint = new window.BMap.Point(nextLocation.lng, nextLocation.lat);
+              
+              const polyline = new window.BMap.Polyline([point, nextPoint], {
+                strokeColor: color,
+                strokeWeight: 3,
+                strokeOpacity: 0.8
+              });
+              
+              map.addOverlay(polyline);
+              newPolylines.push(polyline);
+            }
+          } catch (markerError) {
+            console.error("创建标记时出错:", markerError);
+          }
+        });
+      });
+      
+      // 调整地图视图以显示所有标记
+      if (newMarkers.length > 0) {
+        try {
+          map.setViewport(bounds);
+        } catch (viewportError) {
+          console.error("设置视图范围时出错:", viewportError);
+        }
+      }
+      
+      setMarkers(newMarkers);
+      setPolylines(newPolylines);
+      console.log("地图标记更新完成");
+    } catch (updateError) {
+      console.error("更新地图标记时出错:", updateError);
+      setMapError(`更新地图标记时出错: ${updateError.message}`);
     }
-    
-    setMarkers(newMarkers);
-    setPolylines(newPolylines);
-  }, [map, locations, activeDay, onMarkerClick]);
+  }, [map, locations, activeDay, onMarkerClick, mapLoaded]);
+  
+  if (mapError) {
+    return (
+      <div className={`w-full h-full flex items-center justify-center bg-gray-100 ${className}`}>
+        <div className="text-red-500 text-center p-4 bg-white rounded shadow-md">
+          <h3 className="font-bold mb-2">地图加载错误</h3>
+          <p>{mapError}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            刷新页面
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <div ref={mapRef} className={`w-full h-full ${className}`} />
+    <div ref={mapRef} className={`w-full h-full ${className}`}>
+      {!mapLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-70">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+            <p className="mt-2 text-blue-500">正在加载地图...</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
