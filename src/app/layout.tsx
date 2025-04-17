@@ -13,6 +13,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { NotificationProvider } from '../contexts/NotificationContext';
 import { TravelMapProvider } from '../contexts/TravelMapContext';
+import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -29,12 +30,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <head>
-        {/* 
-          注意：这是测试密钥，仅用于开发环境
-          在生产环境中，应使用您自己申请的百度地图API密钥
-          请访问 http://lbsyun.baidu.com/ 申请
-        */}
-        <script type="text/javascript" src="https://api.map.baidu.com/api?v=3.0&ak=rGqFAjHlqKe8hiP3GIpG1tDqeQMdjjZ8"></script>
+        {/* 注释掉同步脚本，改用Next.js的Script组件 */}
       </head>
       <body className={inter.className}>
         <NotificationProvider>
@@ -44,6 +40,15 @@ export default function RootLayout({
             </main>
           </TravelMapProvider>
         </NotificationProvider>
+        {/* 
+          使用Next.js的Script组件异步加载百度地图API
+          注意：这是测试密钥，仅用于开发环境
+          在生产环境中，应使用您自己申请的百度地图API密钥
+        */}
+        <Script
+          src="https://api.map.baidu.com/api?v=3.0&ak=rGqFAjHlqKe8hiP3GIpG1tDqeQMdjjZ8"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
