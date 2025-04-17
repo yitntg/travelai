@@ -1,22 +1,24 @@
 # 智能旅行规划助手
 
-基于AI对话的旅行行程规划应用，帮助用户通过自然语言对话轻松规划旅行行程。
+基于AI的旅行规划对话平台，帮助用户快速规划个性化的旅行行程。
 
-## 功能特点
+## 主要功能
 
-- 🗣️ 自然语言对话：通过对话形式描述您的旅行需求
-- 🗺️ 智能行程生成：基于您的偏好生成定制化行程
-- 📅 详细日程安排：包含每日活动、景点和时间安排
-- 💡 旅行建议：提供实用的旅行小贴士和注意事项
+- **智能对话规划**：通过自然语言对话，让AI助手了解您的旅行偏好
+- **全屏地图展示**：在背景展示全屏地图，实时显示行程地点和路线
+- **悬浮聊天界面**：可折叠的聊天界面，让您可以专注查看地图
+- **多日行程规划**：支持多日旅行计划，不同天的行程用不同颜色区分
+- **地点详情查看**：点击地图上的地点查看详细信息
 
 ## 技术栈
 
-- Next.js：React框架，提供服务端渲染和API路由
-- TypeScript：类型安全的JavaScript超集
-- Tailwind CSS：实用优先的CSS框架
-- AI对话服务：接入智能对话服务生成行程
+- Next.js 14
+- React 18
+- TypeScript
+- Tailwind CSS
+- 百度地图API
 
-## 快速开始
+## 本地开发
 
 ```bash
 # 安装依赖
@@ -24,31 +26,37 @@ npm install
 
 # 启动开发服务器
 npm run dev
+
+# 构建项目
+npm run build
 ```
 
-访问 [http://localhost:3000](http://localhost:3000) 查看应用。
+## 部署到Cloudflare Pages
 
-## 应用结构
+### 方法1：通过Cloudflare控制台设置
 
-```
-src/
-├── app/                # 主应用目录
-│   ├── api/            # API路由
-│   │   └── chat/       # AI对话API端点
-│   ├── chat/           # 聊天页面
-│   └── page.tsx        # 首页
-├── components/         # 可复用组件
-│   ├── chat/           # 对话相关组件
-│   └── trips/          # 行程相关组件
-├── lib/                # 工具函数和服务
-│   ├── hooks/          # 自定义钩子
-│   └── types.ts        # 类型定义
-└── store/              # 状态管理
-```
+1. 登录Cloudflare Dashboard
+2. 进入Pages项目设置
+3. 配置以下设置:
+   - **构建命令**: `npm run build`
+   - **构建输出目录**: `out`
+   - **环境变量**:
+     - `NODE_VERSION`: `18`
+     - `NPM_VERSION`: `9`
 
-## 未来计划
+### 方法2：通过GitHub Actions自动部署
 
-- 支持多种旅行类型：观光、美食、购物、自然探索等
-- 集成地图服务，展示行程路线
-- 保存和分享行程功能
-- 用户登录和行程历史记录 
+已配置GitHub Actions工作流，推送代码到main分支时会自动部署。
+
+需要在GitHub仓库设置中添加以下密钥:
+- `CLOUDFLARE_API_TOKEN`: Cloudflare API令牌
+- `CLOUDFLARE_ACCOUNT_ID`: Cloudflare账户ID
+
+## 项目结构
+
+- `src/app/` - Next.js应用路由和页面
+- `src/components/` - React组件
+  - `ui/` - 通用UI组件
+  - `chat/` - 聊天相关组件
+- `src/contexts/` - React上下文提供者
+- `src/lib/` - 工具函数和hooks 

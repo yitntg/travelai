@@ -1,15 +1,5 @@
-# wrangler.toml
-name = "travelai"
-type = "javascript"
-compatibility_date = "2023-12-01"
-
-[site]
-bucket = "./out"
-
 [build]
 command = "npm run build"
-upload.format = "directory"
-output_dir = "out"
 
 [build.environment]
 NODE_VERSION = "18"
