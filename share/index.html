@@ -1,0 +1,446 @@
+<!--
+文件名: share/index.html
+功能描述: 智能旅行规划助手的行程共享页面
+
+包含内容:
+  1. 共享行程展示和查看
+  2. 从URL加载行程数据
+  3. 行程打印功能
+
+UI组件:
+  - 顶部导航栏与返回按钮
+  - 行程详情展示
+  - 打印和复制链接按钮
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>共享行程 - 智能旅行规划助手</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../chat/print.css" media="print">
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 0;
+      margin: 0;
+      background: linear-gradient(to bottom, #EBF4FF, #FFFFFF);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 15px 20px;
+      border-bottom: 1px solid #e5e7eb;
+      background-color: white;
+    }
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .back-link {
+      color: #3b82f6;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    h1 {
+      color: #3b82f6;
+      margin: 0;
+      font-size: 20px;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 0 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .main-content {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    .trip-content {
+      padding: 20px;
+    }
+    .trip-content h3 {
+      font-size: 24px;
+      color: #3b82f6;
+      margin-top: 0;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 10px;
+    }
+    .trip-content > p {
+      color: #6b7280;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+    .trip-day {
+      margin-bottom: 24px;
+    }
+    .trip-day-title {
+      background-color: #ebf5ff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: #1e40af;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .trip-activity {
+      margin-bottom: 12px;
+      padding-left: 16px;
+      border-left: 2px solid #dbeafe;
+      padding-bottom: 12px;
+    }
+    .trip-activity-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .trip-activity-title {
+      font-weight: 600;
+      color: #4b5563;
+    }
+    .trip-activity-time {
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .trip-activity-desc {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    .trip-activity-location {
+      font-size: 12px;
+      color: #9ca3af;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .trip-notes {
+      margin-top: 20px;
+      background-color: #fffbeb;
+      border: 1px solid #fef3c7;
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .trip-notes-title {
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 8px;
+    }
+    .trip-notes-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .trip-notes-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      font-size: 14px;
+      color: #92400e;
+      margin-bottom: 6px;
+    }
+    .trip-notes-item:before {
+      content: "•";
+      color: #f59e0b;
+    }
+    .action-button {
+      background-color: #f3f4f6;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-top: 20px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 14px;
+      color: #3b82f6;
+    }
+    .action-button:hover {
+      background-color: #e5e7eb;
+    }
+    .action-button svg {
+      width: 18px;
+      height: 18px;
+    }
+    .print-button {
+      margin-right: 10px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+    }
+    .empty-state h2 {
+      color: #4b5563;
+      margin-bottom: 10px;
+    }
+    .empty-state p {
+      color: #6b7280;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .empty-state a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .empty-state a:hover {
+      text-decoration: underline;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #9ca3af;
+      font-size: 14px;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #4b5563;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+    .toast.show {
+      opacity: 1;
+    }
+    .action-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <a href="/" class="back-link">
+        ← 返回首页
+      </a>
+      <h1>智能旅行规划助手</h1>
+      <div class="actions"></div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="main-content" id="tripContent">
+      <div class="empty-state">
+        <h2>正在加载行程...</h2>
+        <p>如果行程没有自动加载，请确认链接是否正确。您可以在对话页面生成新的行程并获取共享链接。</p>
+        <p><a href="/chat/">前往对话页面</a></p>
+      </div>
+    </div>
+    
+    <div class="footer">
+      智能旅行规划助手 · 由AI提供支持 · <a href="/" style="color: inherit;">首页</a>
+    </div>
+    
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 从URL获取行程数据
+      loadTripFromURL();
+      
+      // 设置操作按钮
+      setupActionButtons();
+    });
+    
+    // 从URL加载行程数据
+    function loadTripFromURL() {
+      try {
+        // 获取URL参数中的行程数据
+        const urlParams = new URLSearchParams(window.location.search);
+        const tripData = urlParams.get('data');
+        
+        if (!tripData) {
+          showEmptyState('未找到行程数据');
+          return;
+        }
+        
+        // 尝试解码和解析数据
+        const decodedData = decodeURIComponent(tripData);
+        const trip = JSON.parse(decodedData);
+        
+        // 显示行程
+        displayTrip(trip);
+      } catch (error) {
+        console.error('加载行程数据失败:', error);
+        showEmptyState('行程数据无效或已损坏');
+      }
+    }
+    
+    // 显示空状态
+    function showEmptyState(message) {
+      const container = document.getElementById('tripContent');
+      container.innerHTML = `
+        <div class="empty-state">
+          <h2>${message}</h2>
+          <p>您可以在对话页面生成新的行程并获取共享链接。</p>
+          <p><a href="/chat/">前往对话页面</a></p>
+        </div>
+      `;
+    }
+    
+    // 设置操作按钮
+    function setupActionButtons() {
+      const actions = document.querySelector('.actions');
+      actions.innerHTML = `
+        <button id="copyButton" class="action-button" title="复制链接">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <span>复制链接</span>
+        </button>
+      `;
+      
+      // 添加复制链接按钮点击事件
+      document.getElementById('copyButton').addEventListener('click', function() {
+        copyCurrentLink();
+      });
+    }
+    
+    // 复制当前链接
+    function copyCurrentLink() {
+      const currentUrl = window.location.href;
+      
+      // 创建临时输入框
+      const tempInput = document.createElement('input');
+      tempInput.value = currentUrl;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      
+      // 复制到剪贴板
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      
+      // 显示提示
+      showToast('链接已复制到剪贴板');
+    }
+    
+    // 显示提示消息
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      
+      // 3秒后隐藏
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+    
+    // 显示行程
+    function displayTrip(trip) {
+      const tripContent = document.getElementById('tripContent');
+      
+      // 生成行程HTML
+      let html = `<div class="trip-content" data-print-date="${new Date().toLocaleDateString('zh-CN')}">`;
+      
+      // 添加标题
+      html += `
+        <h3>${trip.destination || '您的旅行'} 行程规划</h3>
+        <p>${trip.duration || ''} ${trip.travelType ? '• ' + trip.travelType : ''}</p>
+      `;
+      
+      // 添加每天的行程
+      if (trip.days && trip.days.length > 0) {
+        trip.days.forEach((day, index) => {
+          html += `
+            <div class="trip-day">
+              <div class="trip-day-title">${day.title || `第${index + 1}天`}</div>
+          `;
+          
+          // 添加每天的活动
+          if (day.activities && day.activities.length > 0) {
+            day.activities.forEach(activity => {
+              html += `
+                <div class="trip-activity">
+                  <div class="trip-activity-header">
+                    <div class="trip-activity-title">${activity.title || '活动'}</div>
+                    <div class="trip-activity-time">${activity.time || ''}</div>
+                  </div>
+                  ${activity.description ? `<div class="trip-activity-desc">${activity.description}</div>` : ''}
+                  ${activity.location ? `<div class="trip-activity-location">📍 ${activity.location}</div>` : ''}
+                </div>
+              `;
+            });
+          }
+          
+          html += `</div>`;
+        });
+      }
+      
+      // 添加旅行提示
+      if (trip.notes && trip.notes.length > 0) {
+        html += `
+          <div class="trip-notes">
+            <div class="trip-notes-title">旅行提示与建议</div>
+            <ul class="trip-notes-list">
+        `;
+        
+        trip.notes.forEach(note => {
+          html += `<li class="trip-notes-item">${note}</li>`;
+        });
+        
+        html += `
+            </ul>
+          </div>
+        `;
+      }
+      
+      // 添加操作按钮
+      html += `
+        <div class="action-buttons">
+          <button class="action-button print-button" onclick="window.print()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            打印行程
+          </button>
+          
+          <button class="action-button" onclick="copyCurrentLink()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            复制链接
+          </button>
+        </div>
+      `;
+      
+      html += `</div>`;
+      
+      // 更新UI
+      tripContent.innerHTML = html;
+      
+      // 更新页面标题
+      document.title = `${trip.destination || '旅行'} 行程 - 智能旅行规划助手`;
+    }
+  </script>
+</body>
+</html> 

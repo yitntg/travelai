@@ -1,0 +1,375 @@
+<!--
+文件名: examples/index.html
+功能描述: 示例旅行行程展示页面
+包含内容:
+  1. 展示多个预设的旅行行程示例
+  2. 提供行程的详细信息和特点
+  3. 提供返回首页和前往聊天规划的链接
+  4. 支持打印行程功能
+
+UI组件:
+  - 页面标题和说明
+  - 行程卡片列表(多个行程示例)
+  - 导航按钮(首页和聊天页面)
+  - 打印样式支持
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>旅行行程示例 - 智能旅行规划助手</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      color: #1f2937;
+      line-height: 1.5;
+      background: linear-gradient(to bottom, #EBF4FF, #FFFFFF);
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    h1 {
+      color: #3b82f6;
+      margin-bottom: 10px;
+    }
+    .trips {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .trip-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform 0.3s, box-shadow 0.3s;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .trip-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    }
+    .trip-image {
+      height: 180px;
+      background-size: cover;
+      background-position: center;
+    }
+    .trip-content {
+      padding: 20px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .trip-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #3b82f6;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    .trip-description {
+      color: #4b5563;
+      margin-bottom: 15px;
+      flex-grow: 1;
+    }
+    .trip-details {
+      margin-bottom: 15px;
+    }
+    .detail {
+      display: flex;
+      margin-bottom: 5px;
+    }
+    .detail-label {
+      font-weight: bold;
+      width: 80px;
+      flex-shrink: 0;
+    }
+    .detail-value {
+      flex-grow: 1;
+    }
+    .trip-button {
+      background-color: #3b82f6;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      display: inline-block;
+      text-align: center;
+      transition: background-color 0.3s;
+    }
+    .trip-button:hover {
+      background-color: #2563eb;
+    }
+    .nav-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 30px;
+    }
+    .button {
+      display: inline-block;
+      background-color: #3b82f6;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    .button:hover {
+      background-color: #2563eb;
+    }
+    .button.secondary {
+      background-color: #f3f4f6;
+      color: #4b5563;
+    }
+    .button.secondary:hover {
+      background-color: #e5e7eb;
+    }
+    .trip-full {
+      display: none;
+      background-color: #f9fafb;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+      white-space: pre-line;
+    }
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      .container {
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .trip-card {
+        break-inside: avoid;
+        border: 1px solid #ddd;
+        margin-bottom: 20px;
+        page-break-inside: avoid;
+      }
+      .nav-buttons, .trip-button {
+        display: none;
+      }
+      .trip-full {
+        display: block;
+        border: 1px solid #ddd;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>示例旅行行程</h1>
+      <p>浏览我们精心规划的旅行行程示例，或者通过AI助手创建您自己的定制行程。</p>
+    </header>
+
+    <div class="trips">
+      <!-- 北京三日游 -->
+      <div class="trip-card">
+        <div class="trip-image" style="background-image: url('https://images.unsplash.com/photo-1508804185872-d7badad00f7d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80');"></div>
+        <div class="trip-content">
+          <h2 class="trip-title">北京文化探索之旅</h2>
+          <p class="trip-description">探索中国首都的丰富历史和文化遗产，包括世界闻名的长城和紫禁城。</p>
+          <div class="trip-details">
+            <div class="detail">
+              <div class="detail-label">天数:</div>
+              <div class="detail-value">3天</div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">最佳季节:</div>
+              <div class="detail-value">春季或秋季</div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">预算:</div>
+              <div class="detail-value">¥3000-5000</div>
+            </div>
+          </div>
+          <button class="trip-button" onclick="toggleTripDetails(this)">查看详细行程</button>
+          <div class="trip-full">
+第1天: 天安门广场 & 故宫
+- 上午: 参观天安门广场，欣赏升旗仪式（如果时间允许）
+- 中午: 在附近的老北京小吃店品尝当地美食
+- 下午: 探索故宫博物院（紫禁城），这座世界上最大的宫殿建筑群
+- 晚上: 在王府井步行街享用晚餐，体验当地夜市文化
+
+第2天: 长城 & 颐和园
+- 上午: 前往慕田峪长城，这是长城最精华的一段
+- 中午: 在长城附近的农家乐享用午餐
+- 下午: 游览颐和园，欣赏皇家园林的美丽景色
+- 晚上: 在后海酒吧街感受现代北京的夜生活
+
+第3天: 圆明园 & 798艺术区
+- 上午: 参观圆明园遗址公园
+- 中午: 在五道口国际美食街享用午餐
+- 下午: 探索798艺术区，欣赏现代艺术展览
+- 晚上: 观看精彩的功夫表演或京剧演出，体验传统文化
+
+住宿推荐:
+- 豪华: 北京王府半岛酒店
+- 中档: 北京橙家酒店
+- 经济: 如家快捷酒店
+
+交通提示:
+- 建议使用北京地铁，覆盖面广且价格合理
+- 景点之间可以使用滴滴出行或出租车
+- 提前购买景点门票可以避免排队
+          </div>
+        </div>
+      </div>
+
+      <!-- 上海三日游 -->
+      <div class="trip-card">
+        <div class="trip-image" style="background-image: url('https://images.unsplash.com/photo-1535538733305-c09a3bae3d81?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80');"></div>
+        <div class="trip-content">
+          <h2 class="trip-title">上海现代魅力之旅</h2>
+          <p class="trip-description">体验中国最国际化城市的现代魅力与传统韵味的完美融合。</p>
+          <div class="trip-details">
+            <div class="detail">
+              <div class="detail-label">天数:</div>
+              <div class="detail-value">3天</div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">最佳季节:</div>
+              <div class="detail-value">春季或秋季</div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">预算:</div>
+              <div class="detail-value">¥3500-6000</div>
+            </div>
+          </div>
+          <button class="trip-button" onclick="toggleTripDetails(this)">查看详细行程</button>
+          <div class="trip-full">
+第1天: 外滩 & 南京路
+- 上午: 游览外滩，欣赏黄浦江两岸的建筑景观
+- 中午: 在南京路附近品尝上海本帮菜
+- 下午: 漫步南京路步行街，体验购物乐趣
+- 晚上: 乘坐黄浦江夜游船，欣赏上海夜景
+
+第2天: 豫园 & 田子坊
+- 上午: 探索豫园，欣赏传统园林建筑
+- 中午: 在城隍庙小吃街品尝上海特色小吃
+- 下午: 漫步田子坊，感受石库门建筑的文艺气息
+- 晚上: 在新天地享用晚餐，体验洋房石库门的独特魅力
+
+第3天: 上海博物馆 & 陆家嘴
+- 上午: 参观上海博物馆，了解中国艺术历史
+- 中午: 在淮海路附近的餐厅享用午餐
+- 下午: 游览陆家嘴金融区，登上上海中心或东方明珠电视塔观景台
+- 晚上: 在外滩附近的米其林餐厅享用晚餐，品味上海的国际美食
+
+住宿推荐:
+- 豪华: 上海外滩华尔道夫酒店
+- 中档: 上海静安希尔顿酒店
+- 经济: 如家精选酒店
+
+交通提示:
+- 上海地铁网络发达，是游览市区的最佳选择
+- 可以使用共享单车短距离出行
+- 建议提前购买上海旅游卡，可在多个景点享受优惠
+          </div>
+        </div>
+      </div>
+
+      <!-- 成都三日游 -->
+      <div class="trip-card">
+        <div class="trip-image" style="background-image: url('https://images.unsplash.com/photo-1579707736794-67fc6e3e9e26?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80');"></div>
+        <div class="trip-content">
+          <h2 class="trip-title">成都休闲美食之旅</h2>
+          <p class="trip-description">探索中国最休闲城市的美食文化和大熊猫基地，体验慢生活的魅力。</p>
+          <div class="trip-details">
+            <div class="detail">
+              <div class="detail-label">天数:</div>
+              <div class="detail-value">3天</div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">最佳季节:</div>
+              <div class="detail-value">春季或秋季</div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">预算:</div>
+              <div class="detail-value">¥2500-4000</div>
+            </div>
+          </div>
+          <button class="trip-button" onclick="toggleTripDetails(this)">查看详细行程</button>
+          <div class="trip-full">
+第1天: 大熊猫基地 & 锦里古街
+- 上午: 参观成都大熊猫繁育研究基地，观赏可爱的大熊猫
+- 中午: 在研究基地附近餐厅品尝川菜
+- 下午: 游览锦里古街，体验传统川西民俗文化
+- 晚上: 在锦里享用火锅或串串香晚餐
+
+第2天: 武侯祠 & 宽窄巷子
+- 上午: 参观武侯祠，了解三国历史文化
+- 中午: 在附近的老成都茶馆品尝地道小吃并喝茶
+- 下午: 漫步宽窄巷子，体验老成都的生活方式
+- 晚上: 在九眼桥酒吧街享受成都夜生活
+
+第3天: 杜甫草堂 & 青城山
+- 上午: 游览杜甫草堂，感受诗人的文化底蕴
+- 中午: 品尝成都特色小吃如担担面、夫妻肺片等
+- 下午: 前往青城山，欣赏道教名山的自然风光（或可选择都江堰）
+- 晚上: 在春熙路享用晚餐，体验现代成都的繁华
+
+住宿推荐:
+- 豪华: 成都环球中心天堂洲际大饭店
+- 中档: 成都太古里博舍酒店
+- 经济: 如家酒店或民宿
+
+交通提示:
+- 成都市内公交系统发达，适合短途出行
+- 地铁是避开交通拥堵的好选择
+- 去青城山可乘坐高铁或公共汽车
+- 推荐尝试成都共享单车服务
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-buttons">
+      <a href="/" class="button secondary">返回首页</a>
+      <a href="/chat/" class="button">开始规划我的旅行</a>
+    </div>
+  </div>
+
+  <script>
+    function toggleTripDetails(button) {
+      const detailsDiv = button.nextElementSibling;
+      const isVisible = detailsDiv.style.display === 'block';
+      
+      detailsDiv.style.display = isVisible ? 'none' : 'block';
+      button.textContent = isVisible ? '查看详细行程' : '收起详细行程';
+    }
+
+    // 页面加载动画
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.style.opacity = 0;
+      setTimeout(function() {
+        document.body.style.transition = 'opacity 1s';
+        document.body.style.opacity = 1;
+      }, 100);
+    });
+  </script>
+</body>
+</html> 

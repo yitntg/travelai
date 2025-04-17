@@ -1,3 +1,14 @@
+/**
+ * 文件名: src/lib/hooks/useChatService.ts
+ * 功能描述: 聊天服务的React Hook
+ * 
+ * 包含内容:
+ *   - 管理聊天消息状态
+ *   - 处理消息发送和接收
+ *   - 与AI服务进行通信
+ *   - 模拟示例旅行行程数据
+ */
+
 'use client';
 
 import { useState, useCallback } from 'react';

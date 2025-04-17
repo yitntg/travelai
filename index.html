@@ -10,7 +10,7 @@
 UI组件:
   - 页面标题和介绍
   - 功能特点卡片(三个特性展示)
-  - 按钮链接到聊天界面
+  - 按钮链接到聊天界面和示例行程
 -->
 
 <!DOCTYPE html>
@@ -53,9 +53,17 @@ UI组件:
       text-decoration: none;
       font-weight: bold;
       transition: background-color 0.3s;
+      margin: 0 10px;
     }
     .button:hover {
       background-color: #2563eb;
+    }
+    .button.secondary {
+      background-color: #f3f4f6;
+      color: #4b5563;
+    }
+    .button.secondary:hover {
+      background-color: #e5e7eb;
     }
     .features {
       display: flex;
@@ -74,6 +82,14 @@ UI组件:
     .feature h3 {
       color: #3b82f6;
       margin-top: 0;
+    }
+    .buttons {
+      margin-top: 30px;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #9ca3af;
     }
   </style>
 </head>
@@ -97,8 +113,16 @@ UI组件:
       </div>
     </div>
     
-    <p>欢迎使用我们的应用，点击下方按钮开始规划您的旅程</p>
-    <a href="/chat/" class="button">开始规划我的旅行</a>
+    <p>欢迎使用我们的应用，开始规划您的旅程</p>
+    
+    <div class="buttons">
+      <a href="/chat/" class="button">开始规划我的旅行</a>
+      <a href="/examples/" class="button secondary">浏览示例行程</a>
+    </div>
+    
+    <div class="footer">
+      智能旅行规划助手 · 由AI提供支持
+    </div>
   </div>
 
   <script>

@@ -1,3 +1,14 @@
+/**
+ * 文件名: src/app/page.tsx
+ * 功能描述: 智能旅行规划助手的Next.js首页组件
+ * 
+ * 包含内容:
+ *   - 网站首页的React组件
+ *   - 展示应用介绍和使用步骤
+ *   - 提供导航到聊天页面的链接按钮
+ */
+
+import React from 'react';
 import Link from 'next/link';
 
 export default function Home() {

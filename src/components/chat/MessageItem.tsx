@@ -1,3 +1,13 @@
+/**
+ * 文件名: src/components/chat/MessageItem.tsx
+ * 功能描述: 聊天消息项组件
+ * 
+ * 包含内容:
+ *   - 单条消息的显示组件
+ *   - 区分用户消息和AI助手消息的样式
+ *   - 支持显示行程数据提示
+ */
+
 'use client';
 
 import { Message } from '@/lib/types';

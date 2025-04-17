@@ -19,6 +19,8 @@ UI组件:
   - 调用DeepSeek AI API处理用户请求
   - 解析AI响应并展示
   - 管理对话历史记录
+  - 本地存储聊天历史和行程数据
+  - 导出与打印行程功能
 -->
 
 <!DOCTYPE html>
@@ -27,6 +29,7 @@ UI组件:
   <meta charset="utf-8">
   <title>对话 - 智能旅行规划助手</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="print.css" media="print">
   <style>
     body {
       font-family: sans-serif;
@@ -327,6 +330,28 @@ UI组件:
     .bot-message .bot-message-trip-tag {
       display: none;
     }
+    
+    /* 打印按钮 */
+    .print-button {
+      background-color: #f3f4f6;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-top: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 14px;
+      color: #3b82f6;
+    }
+    .print-button:hover {
+      background-color: #e5e7eb;
+    }
+    .print-button svg {
+      width: 18px;
+      height: 18px;
+    }
   </style>
 </head>
 <body>
@@ -402,6 +427,10 @@ UI组件:
     let conversationHistory = [];
     let currentTrip = null;
     
+    // 存储和加载相关的常量
+    const STORAGE_KEY_HISTORY = 'travelai_chat_history';
+    const STORAGE_KEY_TRIP = 'travelai_current_trip';
+    
     // 初始化系统提示
     const systemPrompt = `你是一个专业的旅行规划AI助手，专注于帮助用户规划旅行行程。
 请根据用户描述的目的地、天数、偏好等信息，生成一份详细的旅行计划。
@@ -434,6 +463,211 @@ UI组件:
 </trip>
 
 请确保JSON格式正确，可以被JavaScript解析。`;
+
+    // 页面加载时初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      // 加载保存的聊天历史和行程
+      loadFromLocalStorage();
+      
+      // 添加顶部功能按钮
+      setupHeaderButtons();
+      
+      // 添加初始欢迎消息（如果没有历史记录）
+      setTimeout(addWelcomeMessage, 500);
+    });
+    
+    // 从localStorage加载数据
+    function loadFromLocalStorage() {
+      try {
+        // 加载聊天历史
+        const savedHistory = localStorage.getItem(STORAGE_KEY_HISTORY);
+        if (savedHistory) {
+          conversationHistory = JSON.parse(savedHistory);
+          
+          // 在UI中显示历史消息
+          const chatMessages = document.getElementById('chatMessages');
+          chatMessages.innerHTML = ''; // 清空现有内容
+          
+          conversationHistory.forEach(msg => {
+            const sender = msg.role === 'user' ? 'user' : 'bot';
+            const text = msg.role === 'assistant' ? formatAIMessage(msg.content) : msg.content;
+            
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${sender}-message`;
+            messageElement.textContent = text;
+            chatMessages.appendChild(messageElement);
+          });
+        }
+        
+        // 加载当前行程
+        const savedTrip = localStorage.getItem(STORAGE_KEY_TRIP);
+        if (savedTrip) {
+          currentTrip = JSON.parse(savedTrip);
+          displayTrip(currentTrip);
+        }
+      } catch (error) {
+        console.error('加载本地存储数据失败:', error);
+      }
+    }
+    
+    // 保存数据到localStorage
+    function saveToLocalStorage() {
+      try {
+        // 保存聊天历史
+        localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(conversationHistory));
+        
+        // 保存当前行程
+        if (currentTrip) {
+          localStorage.setItem(STORAGE_KEY_TRIP, JSON.stringify(currentTrip));
+        }
+      } catch (error) {
+        console.error('保存到本地存储失败:', error);
+      }
+    }
+    
+    // 设置顶部功能按钮
+    function setupHeaderButtons() {
+      const headerRight = document.querySelector('.empty-space');
+      headerRight.style.width = 'auto';
+      headerRight.innerHTML = `
+        <button id="clearButton" class="header-button" title="清除历史记录">
+          <span>清除历史</span>
+        </button>
+        <button id="exportButton" class="header-button" title="导出行程">
+          <span>导出行程</span>
+        </button>
+        <button id="printButton" class="header-button" title="打印行程">
+          <span>打印行程</span>
+        </button>
+        <button id="shareButton" class="header-button" title="生成共享链接">
+          <span>共享行程</span>
+        </button>
+      `;
+      
+      // 添加按钮样式
+      const style = document.createElement('style');
+      style.textContent = `
+        .header-button {
+          background-color: #f3f4f6;
+          border: none;
+          border-radius: 4px;
+          padding: 6px 10px;
+          margin-left: 10px;
+          cursor: pointer;
+          font-size: 12px;
+          color: #3b82f6;
+        }
+        .header-button:hover {
+          background-color: #e5e7eb;
+        }
+      `;
+      document.head.appendChild(style);
+      
+      // 添加清除历史按钮点击事件
+      document.getElementById('clearButton').addEventListener('click', function() {
+        if (confirm('确定要清除所有聊天记录和行程数据吗？此操作不可撤销。')) {
+          clearAllData();
+        }
+      });
+      
+      // 添加导出行程按钮点击事件
+      document.getElementById('exportButton').addEventListener('click', function() {
+        exportCurrentTrip();
+      });
+      
+      // 添加打印行程按钮点击事件
+      document.getElementById('printButton').addEventListener('click', function() {
+        printCurrentTrip();
+      });
+      
+      // 添加共享行程按钮点击事件
+      document.getElementById('shareButton').addEventListener('click', function() {
+        generateShareLink();
+      });
+    }
+    
+    // 清除所有数据
+    function clearAllData() {
+      // 清除localStorage
+      localStorage.removeItem(STORAGE_KEY_HISTORY);
+      localStorage.removeItem(STORAGE_KEY_TRIP);
+      
+      // 重置变量
+      conversationHistory = [];
+      currentTrip = null;
+      
+      // 重置UI
+      document.getElementById('chatMessages').innerHTML = '';
+      document.getElementById('tripDisplay').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🗺️</div>
+          <h3 class="empty-title">您的行程将在这里显示</h3>
+          <p class="empty-message">通过左侧聊天框告诉AI助手您的旅行计划，系统将自动生成定制化行程并在此展示。</p>
+        </div>
+      `;
+      
+      // 添加欢迎消息
+      addWelcomeMessage();
+    }
+    
+    // 导出当前行程
+    function exportCurrentTrip() {
+      if (!currentTrip) {
+        alert('没有可导出的行程数据。请先生成一个行程。');
+        return;
+      }
+      
+      // 准备导出数据
+      const exportData = {
+        trip: currentTrip,
+        exportTime: new Date().toISOString(),
+        appVersion: '1.0.0'
+      };
+      
+      // 创建文件内容
+      const fileContent = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([fileContent], { type: 'application/json' });
+      
+      // 生成文件名
+      const destination = currentTrip.destination || '旅行';
+      const fileName = `${destination}_行程计划.json`;
+      
+      // 创建下载链接
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    // 添加欢迎消息
+    function addWelcomeMessage() {
+      const chatMessages = document.getElementById('chatMessages');
+      
+      // 如果聊天历史为空，才添加欢迎消息
+      if (conversationHistory.length === 0) {
+        const welcomeMessage = '您好！我是您的智能旅行规划助手。请告诉我您想去哪里旅行，包括目的地、旅行天数和您的偏好，我将帮您规划一个完美的行程。';
+        
+        // 清除空状态
+        chatMessages.innerHTML = '';
+        
+        // 添加欢迎消息
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message bot-message';
+        messageElement.textContent = welcomeMessage;
+        chatMessages.appendChild(messageElement);
+        
+        // 将此消息添加到对话历史
+        conversationHistory.push({
+          role: "assistant",
+          content: welcomeMessage
+        });
+        
+        // 保存到本地存储
+        saveToLocalStorage();
+      }
+    }
     
     // 辅助函数：选择建议问题
     function selectSuggestion(element) {
@@ -482,6 +716,9 @@ UI组件:
           content: message
         });
         
+        // 保存更新后的历史记录
+        saveToLocalStorage();
+        
         try {
           // 调用DeepSeek API
           const response = await callDeepSeekAPI(message);
@@ -504,6 +741,9 @@ UI组件:
             role: "assistant",
             content: aiMessage
           });
+          
+          // 保存更新后的历史记录和行程
+          saveToLocalStorage();
         } catch (error) {
           // 移除思考中的动画
           chatMessages.removeChild(thinkingElement);
@@ -608,6 +848,9 @@ UI组件:
           
           // 显示行程
           displayTrip(tripData);
+          
+          // 保存行程到本地存储
+          saveToLocalStorage();
         } catch (e) {
           console.error('解析行程JSON失败:', e);
           console.error('原始JSON字符串:', tripMatch[1]);
@@ -622,7 +865,7 @@ UI组件:
       const tripDisplay = document.getElementById('tripDisplay');
       
       // 生成行程HTML
-      let html = `<div class="trip-content">`;
+      let html = `<div class="trip-content" data-print-date="${new Date().toLocaleDateString('zh-CN')}">`;
       
       // 添加标题
       html += `
@@ -676,36 +919,239 @@ UI组件:
         `;
       }
       
+      // 添加打印按钮
+      html += `
+        <button class="print-button" onclick="printCurrentTrip()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          打印行程
+        </button>
+      `;
+      
       html += `</div>`;
       
       // 更新UI
       tripDisplay.innerHTML = html;
     }
     
-    // 添加初始AI消息
-    setTimeout(() => {
-      const chatMessages = document.getElementById('chatMessages');
-      
-      // 如果是空状态，才添加欢迎消息
-      if (chatMessages.querySelector('.empty-state')) {
-        const welcomeMessage = '您好！我是您的智能旅行规划助手。请告诉我您想去哪里旅行，包括目的地、旅行天数和您的偏好，我将帮您规划一个完美的行程。';
-        
-        // 清除空状态
-        chatMessages.innerHTML = '';
-        
-        // 添加欢迎消息
-        const messageElement = document.createElement('div');
-        messageElement.className = 'message bot-message';
-        messageElement.textContent = welcomeMessage;
-        chatMessages.appendChild(messageElement);
-        
-        // 将此消息添加到对话历史
-        conversationHistory.push({
-          role: "assistant",
-          content: welcomeMessage
-        });
+    // 打印当前行程
+    function printCurrentTrip() {
+      if (!currentTrip) {
+        alert('没有可打印的行程数据。请先生成一个行程。');
+        return;
       }
-    }, 500);
+      
+      // 设置打印日期
+      const tripContent = document.querySelector('.trip-content');
+      if (tripContent) {
+        tripContent.setAttribute('data-print-date', new Date().toLocaleDateString('zh-CN'));
+      }
+      
+      // 调用打印功能
+      window.print();
+    }
+    
+    // 生成共享链接
+    function generateShareLink() {
+      if (!currentTrip) {
+        alert('没有可共享的行程数据。请先生成一个行程。');
+        return;
+      }
+      
+      try {
+        // 将行程数据转换为JSON字符串并编码
+        const tripData = JSON.stringify(currentTrip);
+        const encodedData = encodeURIComponent(tripData);
+        
+        // 创建共享链接
+        const shareUrl = `${window.location.origin}/share/?data=${encodedData}`;
+        
+        // 显示共享链接对话框
+        showShareDialog(shareUrl);
+      } catch (error) {
+        console.error('生成共享链接失败:', error);
+        alert('生成共享链接时发生错误，请稍后重试。');
+      }
+    }
+    
+    // 显示共享链接对话框
+    function showShareDialog(shareUrl) {
+      // 创建对话框样式
+      const style = document.createElement('style');
+      style.textContent = `
+        .share-dialog-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+        .share-dialog {
+          background-color: white;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          padding: 20px;
+          width: 90%;
+          max-width: 500px;
+        }
+        .share-dialog-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 15px;
+        }
+        .share-dialog-title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #3b82f6;
+          margin: 0;
+        }
+        .share-dialog-close {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #6b7280;
+          font-size: 20px;
+        }
+        .share-dialog-content {
+          margin-bottom: 20px;
+        }
+        .share-url-container {
+          display: flex;
+          margin-bottom: 15px;
+        }
+        .share-url-input {
+          flex: 1;
+          padding: 8px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 4px 0 0 4px;
+          font-size: 14px;
+        }
+        .share-url-copy {
+          background-color: #3b82f6;
+          color: white;
+          border: none;
+          border-radius: 0 4px 4px 0;
+          padding: 0 12px;
+          cursor: pointer;
+        }
+        .share-dialog-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+        .share-dialog-button {
+          background-color: #f3f4f6;
+          border: none;
+          border-radius: 4px;
+          padding: 8px 16px;
+          cursor: pointer;
+          font-size: 14px;
+          color: #4b5563;
+        }
+        .share-dialog-button.primary {
+          background-color: #3b82f6;
+          color: white;
+        }
+        .share-qrcode {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin-bottom: 15px;
+        }
+        .share-qrcode img {
+          width: 200px;
+          height: 200px;
+          margin-bottom: 10px;
+        }
+        .share-qrcode-caption {
+          font-size: 14px;
+          color: #6b7280;
+        }
+        .share-note {
+          font-size: 12px;
+          color: #9ca3af;
+          margin-top: 10px;
+        }
+      `;
+      document.head.appendChild(style);
+      
+      // 创建对话框HTML
+      const dialogHTML = `
+        <div class="share-dialog-overlay" id="shareDialogOverlay">
+          <div class="share-dialog">
+            <div class="share-dialog-header">
+              <h3 class="share-dialog-title">共享您的行程</h3>
+              <button class="share-dialog-close" onclick="closeShareDialog()">&times;</button>
+            </div>
+            <div class="share-dialog-content">
+              <p>复制以下链接分享给好友，他们可以直接查看您的行程计划：</p>
+              <div class="share-url-container">
+                <input type="text" class="share-url-input" id="shareUrlInput" value="${shareUrl}" readonly>
+                <button class="share-url-copy" onclick="copyShareUrl()">复制</button>
+              </div>
+              
+              <div class="share-qrcode">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}" alt="行程分享二维码">
+                <span class="share-qrcode-caption">扫描二维码查看行程</span>
+              </div>
+              
+              <p class="share-note">注意：共享链接包含您的完整行程数据，链接可能较长。如需长期保存，建议将行程导出为文件。</p>
+            </div>
+            <div class="share-dialog-actions">
+              <button class="share-dialog-button" onclick="closeShareDialog()">关闭</button>
+              <button class="share-dialog-button primary" onclick="window.open('${shareUrl}', '_blank')">打开链接</button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // 添加对话框到页面
+      const dialogContainer = document.createElement('div');
+      dialogContainer.id = 'shareDialogContainer';
+      dialogContainer.innerHTML = dialogHTML;
+      document.body.appendChild(dialogContainer);
+      
+      // 定义关闭对话框函数
+      window.closeShareDialog = function() {
+        const container = document.getElementById('shareDialogContainer');
+        if (container) {
+          document.body.removeChild(container);
+        }
+      };
+      
+      // 定义复制链接函数
+      window.copyShareUrl = function() {
+        const input = document.getElementById('shareUrlInput');
+        input.select();
+        document.execCommand('copy');
+        
+        // 显示复制成功提示
+        const copyButton = input.nextElementSibling;
+        const originalText = copyButton.textContent;
+        copyButton.textContent = '已复制';
+        copyButton.disabled = true;
+        
+        setTimeout(() => {
+          copyButton.textContent = originalText;
+          copyButton.disabled = false;
+        }, 2000);
+      };
+      
+      // 自动选择链接
+      setTimeout(() => {
+        const input = document.getElementById('shareUrlInput');
+        if (input) {
+          input.select();
+        }
+      }, 100);
+    }
   </script>
 </body>
-</html> 
+</html>

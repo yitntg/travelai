@@ -1,3 +1,14 @@
+/**
+ * 文件名: src/components/trips/TripDisplay.tsx
+ * 功能描述: 旅行行程展示组件
+ * 
+ * 包含内容:
+ *   - 展示AI生成的旅行行程详情
+ *   - 显示每日活动、景点和提示
+ *   - 支持保存行程的功能
+ *   - 空状态下显示引导信息
+ */
+
 'use client';
 
 import { Trip } from '@/lib/types';

@@ -1,3 +1,15 @@
+/**
+ * 文件名: src/components/chat/ChatInterface.tsx
+ * 功能描述: 聊天界面组件
+ * 
+ * 包含内容:
+ *   - 用户与AI对话的聊天界面实现
+ *   - 消息列表展示和输入框
+ *   - 处理消息发送和接收逻辑
+ *   - 空状态下的提示信息
+ *   - 加载状态的处理
+ */
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';

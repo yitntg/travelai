@@ -1,3 +1,13 @@
+/**
+ * 文件名: src/lib/types.ts
+ * 功能描述: 应用的TypeScript类型定义文件
+ * 
+ * 包含内容:
+ *   - 聊天相关的接口和类型定义
+ *   - 旅行行程相关的数据结构定义
+ *   - 消息、活动、行程天数等核心类型定义
+ */
+
 // 聊天相关类型
 export type MessageRole = 'user' | 'assistant' | 'system';
 

@@ -1,3 +1,14 @@
+/**
+ * 文件名: src/app/api/chat/route.ts
+ * 功能描述: 处理聊天API请求的路由处理器
+ * 
+ * 包含内容:
+ *   - 处理用户聊天消息的API端点
+ *   - 根据用户输入生成旅行行程
+ *   - 模拟AI响应生成旅行建议
+ *   - 返回结构化的行程数据和回复内容
+ */
+
 import { NextResponse } from 'next/server';
 import { Trip } from '@/lib/types';
 

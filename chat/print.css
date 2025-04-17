@@ -1,0 +1,145 @@
+/**
+ * 文件名: chat/print.css
+ * 功能描述: 专用于打印行程的样式表
+ * 
+ * 包含内容:
+ *   - 优化页面打印效果
+ *   - 隐藏不需要打印的元素
+ *   - 改变颜色和字体，确保在黑白打印时清晰
+ */
+
+@media print {
+  /* 页面基础设置 */
+  body {
+    background: white !important;
+    font-family: serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000 !important;
+    padding: 0;
+    margin: 0;
+  }
+  
+  /* 隐藏不需要打印的元素 */
+  header, 
+  .chat-section,
+  .section-header,
+  .empty-state,
+  .chat-input-container,
+  .header-button {
+    display: none !important;
+  }
+  
+  /* 内容区域样式调整 */
+  .container {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  
+  .main-content {
+    flex-direction: column !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+  
+  .trip-section {
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  /* 行程标题样式 */
+  .trip-content h3 {
+    font-size: 18pt !important;
+    margin: 0 0 5mm !important;
+    border-bottom: 1pt solid #000 !important;
+    padding-bottom: 2mm !important;
+    text-align: center !important;
+  }
+  
+  .trip-content > p {
+    text-align: center !important;
+    font-style: italic !important;
+    margin-bottom: 5mm !important;
+  }
+  
+  /* 日程样式 */
+  .trip-day {
+    margin-bottom: 5mm !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .trip-day-title {
+    background-color: #f0f0f0 !important;
+    border: 1pt solid #ccc !important;
+    padding: 2mm !important;
+    font-weight: bold !important;
+    margin-bottom: 2mm !important;
+    color: #000 !important;
+  }
+  
+  /* 活动样式 */
+  .trip-activity {
+    margin-bottom: 3mm !important;
+    border-left: 1pt solid #ccc !important;
+    padding-left: 3mm !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .trip-activity-header {
+    margin-bottom: 1mm !important;
+  }
+  
+  .trip-activity-title {
+    font-weight: bold !important;
+    color: #000 !important;
+  }
+  
+  .trip-activity-time {
+    color: #555 !important;
+  }
+  
+  .trip-activity-desc {
+    margin-bottom: 1mm !important;
+  }
+  
+  .trip-activity-location {
+    font-style: italic !important;
+  }
+  
+  /* 旅行提示 */
+  .trip-notes {
+    border: 1pt solid #ccc !important;
+    padding: 2mm !important;
+    margin-top: 5mm !important;
+    page-break-inside: avoid !important;
+    background-color: #f9f9f9 !important;
+  }
+  
+  .trip-notes-title {
+    font-weight: bold !important;
+    margin-bottom: 2mm !important;
+    color: #000 !important;
+  }
+  
+  .trip-notes-item {
+    margin-bottom: 1mm !important;
+    color: #000 !important;
+  }
+  
+  /* 页脚 */
+  .trip-content::after {
+    content: "由智能旅行规划助手生成 • 打印日期: " attr(data-print-date);
+    display: block;
+    text-align: center;
+    margin-top: 10mm;
+    font-size: 8pt;
+    color: #999;
+    border-top: 1pt solid #eee;
+    padding-top: 3mm;
+  }
+} 
