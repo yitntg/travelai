@@ -12,12 +12,18 @@
 import { NextResponse } from 'next/server';
 import { Trip } from '@/lib/types';
 
-// DeepSeek API配置
+// DeepSeek API配置 - 直接使用API密钥(仅用于演示)
+// 实际生产环境请使用环境变量，不要硬编码API密钥
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+
+// ===== 临时解决方案：硬编码API密钥 =====
+// 注意：这是临时解决方案，不建议在生产环境中使用
+// 请尽快迁移到使用环境变量或安全的密钥管理方案
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'sk-fbdcd2d4b38644fab2df39b0d9c7dd93'; 
 
 // 调试信息
 console.log('API密钥状态:', DEEPSEEK_API_KEY ? '已配置' : '未配置');
+console.log('API密钥前10个字符:', DEEPSEEK_API_KEY.substring(0, 10) + '...');
 
 // 旅行城市基本信息（用于提供给AI丰富回答）
 const CITY_INFO = {
@@ -47,9 +53,9 @@ const CITY_INFO = {
  * @returns AI生成的回复
  */
 async function generateDeepSeekResponse(message: string) {
-  // 如果缺少API密钥，回退到本地模拟
-  if (!DEEPSEEK_API_KEY) {
-    console.warn('未配置DeepSeek API密钥，使用本地模拟响应');
+  // 确保有API密钥
+  if (!DEEPSEEK_API_KEY || DEEPSEEK_API_KEY === 'sk-your-api-key-here') {
+    console.warn('未配置有效的DeepSeek API密钥，使用本地模拟响应');
     return simulateAIResponse(message);
   }
   
@@ -86,7 +92,10 @@ async function generateDeepSeekResponse(message: string) {
       max_tokens: 1000
     };
     
-    console.log('DeepSeek API请求:', JSON.stringify(requestBody, null, 2));
+    console.log('DeepSeek API请求:', JSON.stringify({
+      ...requestBody,
+      messages: '[消息内容已省略]' // 不记录完整消息内容以减少日志体积
+    }));
     
     // 发送API请求
     const response = await fetch(DEEPSEEK_API_URL, {
@@ -107,7 +116,10 @@ async function generateDeepSeekResponse(message: string) {
     }
     
     const data = await response.json();
-    console.log('DeepSeek API响应成功:', JSON.stringify(data, null, 2));
+    console.log('DeepSeek API响应成功:', JSON.stringify({
+      ...data,
+      choices: data.choices ? '[内容已省略]' : undefined // 不记录完整响应内容以减少日志体积
+    }));
     
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error('DeepSeek API响应格式不正确:', data);
@@ -243,7 +255,7 @@ export async function POST(request: Request) {
     
     // 生成AI回复
     const aiResponse = await generateDeepSeekResponse(message);
-    console.log('AI回复:', aiResponse);
+    console.log('AI回复:', aiResponse ? '成功生成回复' : '生成回复失败');
     
     // 尝试提取行程数据
     const tripData = extractTripData(message, aiResponse);
@@ -253,7 +265,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       content: aiResponse,
       tripData,
-      source: DEEPSEEK_API_KEY ? 'deepseek' : 'simulated'
+      source: DEEPSEEK_API_KEY && DEEPSEEK_API_KEY !== 'sk-your-api-key-here' ? 'deepseek' : 'simulated'
     });
   } catch (error) {
     console.error('处理聊天请求时出错:', error);
