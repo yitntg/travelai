@@ -35,6 +35,155 @@ const conversationResponses = {
   ]
 };
 
+// 城市信息数据库
+const cityInfoDatabase = {
+  '北京': {
+    name: '北京',
+    intro: '北京是中国的首都，拥有3000多年的悠久历史和灿烂文化，是世界著名的古都和现代化国际大都市。',
+    resources: {
+      museums: 148,
+      parks: 226,
+      historicalSites: 98,
+      shoppingAreas: 52,
+      foodStreets: 37
+    },
+    firstVisit: [
+      '故宫博物院',
+      '天安门广场',
+      '八达岭长城',
+      '颐和园',
+      '天坛公园'
+    ],
+    repeatedVisit: [
+      '798艺术区',
+      '南锣鼓巷',
+      '什刹海',
+      '香山公园',
+      '世界公园'
+    ],
+    boundary: {
+      center: { lat: 39.9042, lng: 116.4074 },
+      radius: 50 // 公里
+    }
+  },
+  '上海': {
+    name: '上海',
+    intro: '上海是中国最大的经济中心城市，国际化大都市，有"东方巴黎"和"东方明珠"的美誉。',
+    resources: {
+      museums: 87,
+      parks: 156,
+      historicalSites: 64,
+      shoppingAreas: 93,
+      foodStreets: 42
+    },
+    firstVisit: [
+      '外滩',
+      '东方明珠',
+      '豫园',
+      '南京路步行街',
+      '上海迪士尼乐园'
+    ],
+    repeatedVisit: [
+      '田子坊',
+      '1933老场坊',
+      '朱家角古镇',
+      '世博会博物馆',
+      '上海野生动物园'
+    ],
+    boundary: {
+      center: { lat: 31.2304, lng: 121.4737 },
+      radius: 40 // 公里
+    }
+  },
+  '广州': {
+    name: '广州',
+    intro: '广州是广东省省会，中国南方最大城市，拥有2200多年历史，被誉为"千年商都"。',
+    resources: {
+      museums: 52,
+      parks: 93,
+      historicalSites: 78,
+      shoppingAreas: 64,
+      foodStreets: 86
+    },
+    firstVisit: [
+      '陈家祠',
+      '白云山',
+      '沙面岛',
+      '广州塔',
+      '上下九步行街'
+    ],
+    repeatedVisit: [
+      '岭南印象园',
+      '长隆野生动物世界',
+      '广州博物馆',
+      '广州艺术博物院',
+      '花城广场'
+    ],
+    boundary: {
+      center: { lat: 23.1291, lng: 113.2644 },
+      radius: 35 // 公里
+    }
+  },
+  '成都': {
+    name: '成都',
+    intro: '成都是四川省省会，中国西部地区重要的中心城市，有"天府之国"的美誉，以熊猫和美食闻名于世。',
+    resources: {
+      museums: 47,
+      parks: 74,
+      historicalSites: 56,
+      shoppingAreas: 43,
+      foodStreets: 94
+    },
+    firstVisit: [
+      '成都大熊猫繁育研究基地',
+      '锦里古街',
+      '宽窄巷子',
+      '杜甫草堂',
+      '武侯祠'
+    ],
+    repeatedVisit: [
+      '青城山',
+      '都江堰',
+      '成都博物馆',
+      '望江楼公园',
+      '西岭雪山'
+    ],
+    boundary: {
+      center: { lat: 30.5728, lng: 104.0668 },
+      radius: 30 // 公里
+    }
+  },
+  '西安': {
+    name: '西安',
+    intro: '西安是陕西省省会，中国四大古都之一，拥有3000多年历史，是中华文明和中华民族重要发祥地之一。',
+    resources: {
+      museums: 68,
+      parks: 45,
+      historicalSites: 118,
+      shoppingAreas: 37,
+      foodStreets: 62
+    },
+    firstVisit: [
+      '兵马俑',
+      '大雁塔',
+      '城墙',
+      '回民街',
+      '华清宫'
+    ],
+    repeatedVisit: [
+      '大唐芙蓉园',
+      '陕西历史博物馆',
+      '华山',
+      '钟鼓楼',
+      '大明宫国家遗址公园'
+    ],
+    boundary: {
+      center: { lat: 34.3416, lng: 108.9398 },
+      radius: 25 // 公里
+    }
+  }
+};
+
 // 模拟响应数据（当API未实现或出错时使用）
 const mockResponses = [
   {
@@ -90,6 +239,8 @@ const mockResponses = [
         '故宫需要提前网上预约门票',
         '长城游览建议穿舒适的鞋子，带足饮用水'
       ],
+      cityInfo: cityInfoDatabase['北京'],
+      isFirstVisit: true,
       createdAt: Date.now()
     }
   },
@@ -140,6 +291,8 @@ const mockResponses = [
         '夏季天气炎热，建议携带防晒用品',
         '尝试当地特色小吃，如小笼包、生煎和蟹黄包'
       ],
+      cityInfo: cityInfoDatabase['上海'],
+      isFirstVisit: true,
       createdAt: Date.now()
     }
   }
@@ -171,8 +324,18 @@ function detectIntent(message: string): string {
   // 旅行意图检测
   if (/(去|到|游|玩|旅游|旅行|行程|规划)+.*(北京|上海|广州|深圳|成都|西安|杭州|三亚|丽江|厦门)/.test(lowerMessage) ||
       /(北京|上海|广州|深圳|成都|西安|杭州|三亚|丽江|厦门)+.*(去|到|游|玩|旅游|旅行|行程|规划)/.test(lowerMessage) ||
-      /(几天|多久|一周|周末)+.*(旅游|旅行|行程|规划)/.test(lowerMessage)) {
+      /(几天|多久|一周|周末)+.*(旅游|旅行|行程|规划)/.test(lowerMessage) ||
+      /(推荐|有什么好玩的|哪里好玩|去哪玩|怎么玩)/.test(lowerMessage)) {
     return 'travel_plan';
+  }
+  
+  // 访问次数检测
+  if (/(第一次|首次|没去过)/.test(lowerMessage)) {
+    return 'first_visit';
+  }
+  
+  if (/(第二次|再次|又|已经去过|去过了)/.test(lowerMessage)) {
+    return 'repeated_visit';
   }
   
   // 默认为一般咨询
@@ -197,13 +360,58 @@ function getRandomResponse(responseType: string): string {
  * @returns 城市名称或空字符串
  */
 function extractCity(message: string): string {
-  const cities = ['北京', '上海', '广州', '深圳', '成都', '西安', '杭州', '三亚', '丽江', '厦门'];
+  const cities = Object.keys(cityInfoDatabase);
   for (const city of cities) {
     if (message.includes(city)) {
       return city;
     }
   }
   return '';
+}
+
+/**
+ * 判断是否是首次访问
+ * @param message 用户消息
+ * @returns 是否是首次访问
+ */
+function isFirstTimeVisit(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+  // 检测是否明确提到首次访问
+  if (/(第一次|首次|没去过|从未去过)/.test(lowerMessage)) {
+    return true;
+  }
+  
+  // 检测是否明确提到再次访问
+  if (/(第二次|再次|又|已经去过|去过了|再来)/.test(lowerMessage)) {
+    return false;
+  }
+  
+  // 默认为首次访问
+  return true;
+}
+
+/**
+ * 生成城市基本信息介绍
+ * @param city 城市名
+ * @param isFirstVisit 是否首次访问
+ * @returns 城市介绍文本
+ */
+function generateCityIntro(city: string, isFirstVisit: boolean): string {
+  const cityInfo = cityInfoDatabase[city as keyof typeof cityInfoDatabase];
+  if (!cityInfo) return '';
+  
+  const { intro, resources, firstVisit, repeatedVisit } = cityInfo;
+  const recommendSpots = isFirstVisit ? firstVisit : repeatedVisit;
+  const visitType = isFirstVisit ? '首次' : '再次';
+  
+  return `${intro}
+
+${city}拥有丰富的旅游资源，包括${resources.museums}座博物馆、${resources.parks}个公园、${resources.historicalSites}处历史古迹、${resources.shoppingAreas}个购物区和${resources.foodStreets}条美食街。
+
+对于${visitType}到访${city}的游客，我推荐您优先考虑以下景点：
+${recommendSpots.map((spot, index) => `${index + 1}. ${spot}`).join('\n')}
+
+下面是我为您量身定制的详细行程：`;
 }
 
 /**
@@ -225,23 +433,62 @@ export async function sendChatMessage(message: string): Promise<{ content: strin
     console.log('检测用户意图:', intent);
     
     // 根据意图返回不同响应
-    if (intent === 'travel_plan') {
+    if (intent === 'travel_plan' || intent === 'first_visit' || intent === 'repeated_visit') {
       // 旅行规划意图，返回行程
       const city = extractCity(message);
-      if (city === '北京') {
-        return mockResponses[0];
-      } else if (city === '上海') {
-        return mockResponses[1];
+      const isFirstTime = intent === 'first_visit' ? true : (intent === 'repeated_visit' ? false : isFirstTimeVisit(message));
+      
+      if (city && cityInfoDatabase[city as keyof typeof cityInfoDatabase]) {
+        let baseResponse;
+        if (city === '北京') {
+          baseResponse = {...mockResponses[0]};
+        } else if (city === '上海') {
+          baseResponse = {...mockResponses[1]};
+        } else {
+          // 其他城市默认使用北京的行程结构
+          baseResponse = JSON.parse(JSON.stringify(mockResponses[0]));
+          baseResponse.tripData.destination = city;
+        }
+        
+        // 添加城市信息和访问类型
+        baseResponse.tripData.cityInfo = cityInfoDatabase[city as keyof typeof cityInfoDatabase];
+        baseResponse.tripData.isFirstVisit = isFirstTime;
+        
+        // 更新内容包含城市基本情况
+        const cityIntro = generateCityIntro(city, isFirstTime);
+        baseResponse.content = cityIntro + '\n\n' + baseResponse.content.replace(/^[^。]+。/, '');
+        
+        // 如果是再次访问，调整推荐景点
+        if (!isFirstTime && baseResponse.tripData.days) {
+          const repeatedVisitSpots = cityInfoDatabase[city as keyof typeof cityInfoDatabase]?.repeatedVisit || [];
+          
+          // 替换部分景点为适合再次访问的景点
+          let spotIndex = 0;
+          baseResponse.tripData.days.forEach((day: { activities?: { title: string; description: string }[] }) => {
+            if (day.activities && day.activities.length > 0) {
+              const randomActivity = Math.floor(Math.random() * day.activities.length);
+              if (spotIndex < repeatedVisitSpots.length) {
+                day.activities[randomActivity].title = repeatedVisitSpots[spotIndex];
+                day.activities[randomActivity].description = `作为${city}的深度景点，${repeatedVisitSpots[spotIndex]}非常适合再次到访的游客。`;
+                spotIndex++;
+              }
+            }
+          });
+          
+          // 添加特别说明
+          baseResponse.tripData.notes.push(`这个行程专为再次到访${city}的游客设计，侧重于深度体验。`);
+        }
+        
+        return baseResponse;
       } else if (city) {
-        // 其他城市默认返回北京的行程（实际应用中应该有更多城市数据）
-        const response = {...mockResponses[0]};
-        response.content = response.content.replace('北京', city);
-        response.tripData = {...response.tripData, destination: city};
-        return response;
+        // 有城市但没有详细数据
+        return {
+          content: `${city}是一个非常有魅力的城市。不过我目前没有${city}的详细数据。您是想了解北京、上海、广州、成都或西安的旅游信息吗？这些城市我有更详细的资料。`
+        };
       } else {
         // 没有提到具体城市
         return {
-          content: "您想去哪个城市旅行呢？目前我可以为您规划北京和上海的行程。请告诉我目的地和天数，例如「我想去北京旅游5天」。"
+          content: "您想去哪个城市旅行呢？目前我可以为您提供北京、上海、广州、成都和西安的详细旅游资讯和行程规划。请告诉我目的地和天数，例如「我想去北京旅游5天」，以及是否是您第一次到访这个城市。"
         };
       }
     } else {
