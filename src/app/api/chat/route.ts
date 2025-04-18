@@ -16,6 +16,9 @@ import { Trip } from '@/lib/types';
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 
+// 调试信息
+console.log('API密钥状态:', DEEPSEEK_API_KEY ? '已配置' : '未配置');
+
 // 旅行城市基本信息（用于提供给AI丰富回答）
 const CITY_INFO = {
   '北京': {
@@ -51,6 +54,8 @@ async function generateDeepSeekResponse(message: string) {
   }
   
   try {
+    console.log('准备调用DeepSeek API...');
+    
     // 准备系统提示词
     const systemPrompt = `你是一个专业的旅游顾问机器人，专注于为用户提供个性化的旅行建议和行程规划。
     当用户询问旅行相关问题时，请尽可能提供详细有用的信息，包括：
@@ -65,6 +70,24 @@ async function generateDeepSeekResponse(message: string) {
     如果用户说"你好"之类的问候语，请以友好方式问候并介绍自己是旅行顾问。
     对于没有明确目的地的旅行询问，请推荐几个热门目的地并询问用户偏好。`;
     
+    const requestBody = {
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: message
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000
+    };
+    
+    console.log('DeepSeek API请求:', JSON.stringify(requestBody, null, 2));
+    
     // 发送API请求
     const response = await fetch(DEEPSEEK_API_URL, {
       method: 'POST',
@@ -72,28 +95,25 @@ async function generateDeepSeekResponse(message: string) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
       },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt
-          },
-          {
-            role: 'user',
-            content: message
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1000
-      })
+      body: JSON.stringify(requestBody)
     });
     
+    console.log('DeepSeek API响应状态:', response.status);
+    
     if (!response.ok) {
-      throw new Error(`DeepSeek API请求失败: ${response.status}`);
+      const errorText = await response.text();
+      console.error('DeepSeek API错误响应:', errorText);
+      throw new Error(`DeepSeek API请求失败: ${response.status}, ${errorText}`);
     }
     
     const data = await response.json();
+    console.log('DeepSeek API响应成功:', JSON.stringify(data, null, 2));
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('DeepSeek API响应格式不正确:', data);
+      throw new Error('DeepSeek API响应格式不正确');
+    }
+    
     return data.choices[0].message.content;
   } catch (error) {
     console.error('调用DeepSeek API出错:', error);
@@ -108,6 +128,7 @@ async function generateDeepSeekResponse(message: string) {
  * @returns 模拟的AI响应
  */
 function simulateAIResponse(message: string) {
+  console.log('使用本地模拟响应来回答:', message);
   const lowerMessage = message.toLowerCase();
   
   // 问候语检测
@@ -205,32 +226,39 @@ function extractTripData(message: string, aiResponse: string): Trip | null {
 // 处理聊天请求的API端点
 export async function POST(request: Request) {
   try {
+    console.log('收到聊天API请求');
     const body = await request.json();
     const { message } = body;
 
     // 验证消息格式
     if (!message || typeof message !== 'string') {
+      console.warn('无效的消息内容');
       return NextResponse.json(
         { error: '请提供有效的消息内容' },
         { status: 400 }
       );
     }
 
+    console.log('用户消息:', message);
+    
     // 生成AI回复
     const aiResponse = await generateDeepSeekResponse(message);
+    console.log('AI回复:', aiResponse);
     
     // 尝试提取行程数据
     const tripData = extractTripData(message, aiResponse);
+    console.log('提取的行程数据:', tripData ? '已生成' : '无');
 
     // 返回响应
     return NextResponse.json({
       content: aiResponse,
-      tripData
+      tripData,
+      source: DEEPSEEK_API_KEY ? 'deepseek' : 'simulated'
     });
   } catch (error) {
     console.error('处理聊天请求时出错:', error);
     return NextResponse.json(
-      { error: '处理您的请求时发生错误，请稍后再试' },
+      { error: '处理您的请求时发生错误，请稍后再试', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
