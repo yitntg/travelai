@@ -420,8 +420,8 @@ ${recommendSpots.map((spot, index) => `${index + 1}. ${spot}`).join('\n')}
  * @returns API响应
  */
 export async function sendChatMessage(message: string): Promise<{ content: string; tripData?: any }> {
-  // 使用模拟数据（仅用于演示）
-  const useMockData = true;
+  // 使用真实API（不再使用模拟数据）
+  const useMockData = false;
 
   if (useMockData) {
     console.log('使用模拟数据响应');
