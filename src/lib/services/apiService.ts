@@ -6,9 +6,34 @@
  *   - 处理与后端API的通信
  *   - 发送聊天消息
  *   - 处理API错误
+ *   - 智能响应不同类型的用户输入
  */
 
 import { Message } from '../types';
+
+// 基本对话响应（用于非旅行相关的问题）
+const conversationResponses = {
+  greeting: [
+    "您好！我是您的智能旅行助手。有什么可以帮到您的吗？",
+    "您好，很高兴为您服务。请问您有什么旅行计划需要帮助？",
+    "您好！今天想去哪里旅行呢？我可以帮您规划行程。"
+  ],
+  farewell: [
+    "再见，期待下次为您服务！",
+    "祝您有愉快的一天！随时回来咨询旅行计划。",
+    "再见！期待帮您规划下一次精彩旅程。"
+  ],
+  thanks: [
+    "不客气，这是我的荣幸！",
+    "很高兴能帮到您，有任何旅行问题随时问我。",
+    "不用谢，为您提供旅行建议是我的工作。"
+  ],
+  default: [
+    "作为旅行助手，我可以帮您规划行程、推荐景点和提供旅行建议。请告诉我您想去哪里旅行，例如「我想去北京旅游5天」。",
+    "我专注于旅行规划服务。如果您有特定的目的地和天数，比如「我想去上海玩3天」，我可以为您制定详细行程。",
+    "我最擅长旅行规划。请告诉我您的旅行目的地和时间，我会为您推荐最佳行程。"
+  ]
+};
 
 // 模拟响应数据（当API未实现或出错时使用）
 const mockResponses = [
@@ -121,6 +146,67 @@ const mockResponses = [
 ];
 
 /**
+ * 根据用户输入判断意图
+ * @param message 用户消息
+ * @returns 意图类型
+ */
+function detectIntent(message: string): string {
+  const lowerMessage = message.toLowerCase();
+  
+  // 问候语检测
+  if (/^(你好|您好|嗨|哈喽|hello|hi|hey)/.test(lowerMessage)) {
+    return 'greeting';
+  }
+  
+  // 道别检测
+  if (/^(再见|拜拜|goodbye|bye)/.test(lowerMessage)) {
+    return 'farewell';
+  }
+  
+  // 感谢检测
+  if (/^(谢谢|感谢|thank)/.test(lowerMessage)) {
+    return 'thanks';
+  }
+  
+  // 旅行意图检测
+  if (/(去|到|游|玩|旅游|旅行|行程|规划)+.*(北京|上海|广州|深圳|成都|西安|杭州|三亚|丽江|厦门)/.test(lowerMessage) ||
+      /(北京|上海|广州|深圳|成都|西安|杭州|三亚|丽江|厦门)+.*(去|到|游|玩|旅游|旅行|行程|规划)/.test(lowerMessage) ||
+      /(几天|多久|一周|周末)+.*(旅游|旅行|行程|规划)/.test(lowerMessage)) {
+    return 'travel_plan';
+  }
+  
+  // 默认为一般咨询
+  return 'default';
+}
+
+/**
+ * 获取随机响应
+ * @param responseType 响应类型
+ * @returns 随机响应文本
+ */
+function getRandomResponse(responseType: string): string {
+  const responses = conversationResponses[responseType as keyof typeof conversationResponses] || 
+                    conversationResponses.default;
+  const randomIndex = Math.floor(Math.random() * responses.length);
+  return responses[randomIndex];
+}
+
+/**
+ * 获取匹配的城市
+ * @param message 用户消息
+ * @returns 城市名称或空字符串
+ */
+function extractCity(message: string): string {
+  const cities = ['北京', '上海', '广州', '深圳', '成都', '西安', '杭州', '三亚', '丽江', '厦门'];
+  for (const city of cities) {
+    if (message.includes(city)) {
+      return city;
+    }
+  }
+  return '';
+}
+
+/**
  * 发送聊天消息到API
  * @param message 用户发送的消息
  * @returns API响应
@@ -134,14 +220,35 @@ export async function sendChatMessage(message: string): Promise<{ content: strin
     // 等待1秒模拟网络延迟
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // 基于用户消息内容选择不同的模拟响应
-    if (message.toLowerCase().includes('北京')) {
-      return mockResponses[0];
-    } else if (message.toLowerCase().includes('上海')) {
-      return mockResponses[1];
+    // 检测用户意图
+    const intent = detectIntent(message);
+    console.log('检测用户意图:', intent);
+    
+    // 根据意图返回不同响应
+    if (intent === 'travel_plan') {
+      // 旅行规划意图，返回行程
+      const city = extractCity(message);
+      if (city === '北京') {
+        return mockResponses[0];
+      } else if (city === '上海') {
+        return mockResponses[1];
+      } else if (city) {
+        // 其他城市默认返回北京的行程（实际应用中应该有更多城市数据）
+        const response = {...mockResponses[0]};
+        response.content = response.content.replace('北京', city);
+        response.tripData = {...response.tripData, destination: city};
+        return response;
+      } else {
+        // 没有提到具体城市
+        return {
+          content: "您想去哪个城市旅行呢？目前我可以为您规划北京和上海的行程。请告诉我目的地和天数，例如「我想去北京旅游5天」。"
+        };
+      }
     } else {
-      // 默认返回北京行程
-      return mockResponses[0];
+      // 非旅行规划意图，返回对话响应
+      return {
+        content: getRandomResponse(intent)
+      };
     }
   }
   
