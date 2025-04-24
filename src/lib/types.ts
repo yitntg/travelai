@@ -1,16 +1,12 @@
 /**
- * 文件名: src/lib/types.ts
- * 功能描述: 应用的TypeScript类型定义文件
- * 
- * 包含内容:
- *   - 聊天相关的接口和类型定义
- *   - 旅行行程相关的数据结构定义
- *   - 消息、活动、行程天数等核心类型定义
+ * 文件名: types.ts
+ * 功能描述: 全局类型定义
  */
 
-// 聊天相关类型
+// 消息角色类型
 export type MessageRole = 'user' | 'assistant' | 'system';
 
+// 消息类型
 export interface Message {
   role: MessageRole;
   content: string;
@@ -18,29 +14,36 @@ export interface Message {
   tripData?: Trip | null;
 }
 
-// 行程相关类型
-export interface Activity {
-  time: string;
-  title: string;
-  description: string;
-  location?: string;
-  cost?: string;
+// 旅行行程类型
+export interface Trip {
+  destination: string;
+  duration: string;
+  travelType?: string;
+  days: TripDay[];
 }
 
+// 行程天数类型
 export interface TripDay {
   title: string;
   activities: Activity[];
 }
 
-export interface Trip {
-  destination: string;
-  duration: string;
-  travelType: string;
-  startDate?: string;
-  endDate?: string;
-  travelers?: number;
-  budget?: string;
-  days: TripDay[];
-  notes?: string[];
-  createdAt: number;
+// 活动类型
+export interface Activity {
+  time: string;
+  title: string;
+  description?: string;
+  location?: string;
+}
+
+// 位置类型
+export interface Location {
+  name: string;
+  address?: string;
+  description?: string;
+  lat?: number;
+  lng?: number;
+  coordinates?: [number, number];
+  day?: number;
+  order?: number;
 } 
