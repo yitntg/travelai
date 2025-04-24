@@ -20,6 +20,8 @@ export interface Trip {
   duration: string;
   travelType?: string;
   days: TripDay[];
+  notes?: string[];
+  createdAt?: number;
 }
 
 // 行程天数类型
