@@ -1,328 +1,209 @@
 /**
  * 文件名: src/components/ui/TravelMap.tsx
- * 功能描述: 全屏旅行地图组件
- * 
- * 包含内容:
- *   - Leaflet地图作为全屏背景
- *   - 支持旅行地点标记
- *   - 支持路线连接和多日行程展示
- *   - 通过事件总线接收位置更新
+ * 功能描述: 旅行地图组件
  */
 
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import eventBus, { APP_EVENTS } from '../../lib/services/eventBus';
-
-export interface LocationPoint {
-  name: string;
-  address?: string;
-  lat: number;
-  lng: number;
-  day: number;
-  description?: string;
-  order: number; // 当天的顺序
-}
+import type { Location } from '@/lib/types';
 
 interface TravelMapProps {
-  locations?: LocationPoint[];
-  activeDay?: number;
-  onMarkerClick?: (location: LocationPoint) => void;
-  className?: string;
-  autoUpdateFromEvents?: boolean; // 是否自动从事件总线接收更新
+  locations?: Location[];
+  onMarkerClick?: (location: Location) => void;
 }
 
-export default function TravelMap({ 
-  locations = [], 
-  activeDay,
-  onMarkerClick,
-  className = '',
-  autoUpdateFromEvents = true
-}: TravelMapProps) {
+// 获取不同天数的颜色
+const getDayColor = (dayIndex: number): string => {
+  const colors = ['#FF5722', '#2196F3', '#4CAF50', '#9C27B0', '#FFC107', '#795548', '#E91E63'];
+  return colors[dayIndex % colors.length];
+};
+
+export default function TravelMap({ locations = [], onMarkerClick }: TravelMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [markers, setMarkers] = useState<any[]>([]);
-  const [polylines, setPolylines] = useState<any[]>([]);
-  const [retryCount, setRetryCount] = useState(0);
-  const [mapLocations, setMapLocations] = useState<LocationPoint[]>(locations);
-  const mapInstance = useRef<any>(null);
-  const maxRetries = 3;
-  
-  // 从事件总线接收位置更新
-  useEffect(() => {
-    if (!autoUpdateFromEvents) return;
-    
-    const unsubscribe = eventBus.subscribe(APP_EVENTS.MAP_LOCATIONS_UPDATED, (updatedLocations: LocationPoint[]) => {
-      console.log("从事件总线接收到地点更新:", updatedLocations);
-      setMapLocations(updatedLocations);
-    });
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [autoUpdateFromEvents]);
-  
-  // 当props中的locations变化时更新内部状态
-  useEffect(() => {
-    if (locations.length > 0) {
-      setMapLocations(locations);
-    }
-  }, [locations]);
-  
+  const mapInstanceRef = useRef<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   // 初始化地图
   useEffect(() => {
     if (!mapRef.current) return;
     
-    try {
-      console.log("初始化Leaflet地图...");
-      
-      // 检查Leaflet是否可用
-      if (typeof window === 'undefined' || !window.L) {
-        console.error("Leaflet库未加载，手动加载");
-        
-        // 添加Leaflet CSS
-        const linkEl = document.createElement('link');
-        linkEl.rel = 'stylesheet';
-        linkEl.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(linkEl);
-        
-        // 添加Leaflet JS
-        const scriptEl = document.createElement('script');
-        scriptEl.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        scriptEl.onload = () => {
-          console.log("Leaflet已手动加载");
-          initializeMap();
-        };
-        document.body.appendChild(scriptEl);
-        return;
-      }
-      
-      initializeMap();
-    } catch (error) {
-      console.error("初始化地图时出错:", error);
-      setMapError(`初始化地图时出错: ${error instanceof Error ? error.message : String(error)}`);
-      
-      // 报告错误到事件总线
-      eventBus.publish(APP_EVENTS.APP_ERROR, {
-        source: 'map',
-        message: '初始化地图时出错',
-        error
-      });
-    }
-    
-    // 内部初始化函数
-    function initializeMap() {
-      if (!mapRef.current || !window.L) return;
-      
-      // 清理已有地图实例
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-      }
-      
-      // 创建新地图
+    const initMap = async () => {
       try {
-        const map = window.L.map(mapRef.current).setView([35.86166, 104.195397], 5);
-        
-        // 添加地图图层
-        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-        
-        // 保存地图实例
-        mapInstance.current = map;
-        setMapLoaded(true);
-        setMapError(null);
-        
-        console.log("地图初始化成功");
-        
-        // 通知地图加载完成
-        eventBus.publish(APP_EVENTS.APP_READY, { component: 'map' });
-        
-        // 如果有位置数据，立即更新标记
-        if (mapLocations.length > 0) {
-          updateMarkers(map, mapLocations);
+        // 加载Leaflet
+        if (typeof window !== 'undefined' && !window.L) {
+          // 加载CSS
+          const linkEl = document.createElement('link');
+          linkEl.rel = 'stylesheet';
+          linkEl.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(linkEl);
+          
+          // 加载JS
+          const scriptEl = document.createElement('script');
+          scriptEl.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          scriptEl.async = true;
+          
+          await new Promise((resolve) => {
+            scriptEl.onload = resolve;
+            document.head.appendChild(scriptEl);
+          });
         }
-      } catch (initError) {
-        console.error("创建地图实例失败:", initError);
-        setMapError(`创建地图失败: ${initError instanceof Error ? initError.message : String(initError)}`);
         
-        // 报告错误到事件总线
-        eventBus.publish(APP_EVENTS.APP_ERROR, {
-          source: 'map',
-          message: '创建地图实例失败',
-          error: initError
-        });
-      }
-    }
-    
-    // 组件卸载时清理
-    return () => {
-      if (mapInstance.current) {
-        console.log("清理地图资源");
-        mapInstance.current.remove();
-        mapInstance.current = null;
+        // 清理旧实例
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+        }
+        
+        // 创建地图实例
+        mapInstanceRef.current = window.L.map(mapRef.current).setView([35.8617, 104.1954], 4);
+        
+        // 添加图层
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(mapInstanceRef.current);
+        
+        // 更新标记
+        updateMarkers();
+        setIsLoading(false);
+      } catch (err) {
+        console.error('地图加载失败:', err);
+        setError('地图加载失败，请刷新页面重试');
+        setIsLoading(false);
       }
     };
-  }, [retryCount, mapLocations]);
+    
+    initMap();
+    
+    // 清理
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
   
   // 更新地图标记
-  useEffect(() => {
-    if (!mapInstance.current || !mapLoaded || mapLocations.length === 0) return;
-    updateMarkers(mapInstance.current, mapLocations);
-  }, [mapLocations, activeDay, onMarkerClick, mapLoaded]);
-  
-  // 更新标记的函数
-  function updateMarkers(map: any, locations: LocationPoint[]) {
+  const updateMarkers = () => {
+    if (!mapInstanceRef.current || !locations || !window.L) return;
+    
     try {
-      console.log("更新地图标记...");
-      
-      // 清除现有标记和线条
-      markers.forEach(marker => {
-        if (marker && marker.remove) marker.remove();
-      });
-      polylines.forEach(line => {
-        if (line && line.remove) line.remove();
-      });
-      
-      const newMarkers: any[] = [];
-      const newPolylines: any[] = [];
-      const points: any[] = [];
-      
-      // 按天数分组
-      const locationsByDay = locations.reduce((acc, location) => {
-        if (!acc[location.day]) {
-          acc[location.day] = [];
+      // 清除现有标记
+      mapInstanceRef.current.eachLayer((layer: any) => {
+        if (layer instanceof window.L.Marker || layer instanceof window.L.Polyline) {
+          mapInstanceRef.current.removeLayer(layer);
         }
-        acc[location.day].push(location);
-        return acc;
-      }, {} as Record<number, LocationPoint[]>);
-      
-      // 每天的地点按顺序排列
-      Object.keys(locationsByDay).forEach(day => {
-        locationsByDay[Number(day)].sort((a, b) => a.order - b.order);
       });
       
-      // 日期对应的颜色
-      const dayColors = [
-        '#FF4136', // 红色
-        '#0074D9', // 蓝色
-        '#2ECC40', // 绿色
-        '#FF851B', // 橙色
-        '#B10DC9', // 紫色
-        '#39CCCC', // 青色
-        '#FFDC00', // 黄色
-        '#F012BE', // 粉色
-        '#01FF70', // 亮绿色
-        '#85144b', // 梅红色
-      ];
+      // 按天数分组位置
+      const locationsByDay: Record<number, Location[]> = {};
+      locations.forEach(location => {
+        const day = location.day || 1;
+        if (!locationsByDay[day]) {
+          locationsByDay[day] = [];
+        }
+        locationsByDay[day].push(location);
+      });
       
-      // 添加标记和线条
+      // 所有有效坐标
+      const allCoords: [number, number][] = [];
+      
+      // 为每天添加标记和路线
       Object.entries(locationsByDay).forEach(([day, dayLocations]) => {
-        if (activeDay !== undefined && Number(day) !== activeDay) return;
+        const dayIndex = parseInt(day, 10) - 1;
+        const dayColor = getDayColor(dayIndex);
+        const dayCoords: [number, number][] = [];
         
-        const dayIndex = Number(day) % dayColors.length;
-        const color = dayColors[dayIndex];
-        
-        // 添加地点标记
         dayLocations.forEach((location, index) => {
-          try {
-            const latlng = window.L.latLng(location.lat, location.lng);
-            points.push(latlng);
-            
+          let coords: [number, number] | undefined;
+          
+          // 提取坐标
+          if (Array.isArray(location.coordinates) && location.coordinates.length === 2) {
+            coords = location.coordinates;
+          } else if (location.lat && location.lng) {
+            coords = [Number(location.lat), Number(location.lng)];
+          }
+          
+          if (coords) {
             // 创建标记
-            const marker = window.L.marker(latlng)
-              .addTo(map)
-              .bindPopup(`<b>${location.name}</b><br>第${day}天 - 第${index+1}个景点`);
+            const marker = window.L.marker(coords, {
+              title: location.name,
+              icon: window.L.divIcon({
+                html: `<div style="background-color:${dayColor};color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:bold;">${index + 1}</div>`,
+                className: 'map-marker',
+                iconSize: [24, 24]
+              })
+            }).addTo(mapInstanceRef.current);
             
-            // 点击事件处理
-            marker.on('click', () => {
-              // 发布标记点击事件
-              eventBus.publish(APP_EVENTS.MAP_LOCATION_SELECTED, location);
-              // 调用回调函数（如果有）
-              if (onMarkerClick) onMarkerClick(location);
-            });
-            
-            newMarkers.push(marker);
-            
-            // 如果不是当天最后一个地点，添加到下一个地点的线
-            if (index < dayLocations.length - 1) {
-              const nextLocation = dayLocations[index + 1];
-              const nextLatLng = window.L.latLng(nextLocation.lat, nextLocation.lng);
-              
-              const line = window.L.polyline([latlng, nextLatLng], {
-                color: color,
-                weight: 3
-              }).addTo(map);
-              
-              newPolylines.push(line);
+            // 点击事件
+            if (onMarkerClick) {
+              marker.on('click', () => onMarkerClick(location));
             }
-          } catch (err) {
-            console.error("添加标记时出错:", err);
+            
+            // 添加工具提示
+            if (location.name) {
+              marker.bindTooltip(location.name);
+            }
+            
+            dayCoords.push(coords);
+            allCoords.push(coords);
           }
         });
+        
+        // 路线连接
+        if (dayCoords.length > 1) {
+          window.L.polyline(dayCoords, {
+            color: dayColor,
+            weight: 3,
+            opacity: 0.7
+          }).addTo(mapInstanceRef.current);
+        }
       });
       
-      // 自动调整视图
-      if (points.length > 0) {
-        const bounds = window.L.latLngBounds(points);
-        map.fitBounds(bounds, { padding: [50, 50] });
+      // 调整视图
+      if (allCoords.length > 0) {
+        mapInstanceRef.current.fitBounds(allCoords);
       }
-      
-      setMarkers(newMarkers);
-      setPolylines(newPolylines);
-    } catch (updateError) {
-      console.error("更新标记时出错:", updateError);
-      
-      // 报告错误到事件总线
-      eventBus.publish(APP_EVENTS.APP_ERROR, {
-        source: 'map',
-        message: '更新标记时出错',
-        error: updateError
-      });
+    } catch (err) {
+      console.error('更新地图标记失败:', err);
     }
-  }
+  };
   
-  if (mapError) {
-    return (
-      <div className={`w-full h-full flex items-center justify-center bg-gray-100 ${className}`}>
-        <div className="text-red-500 text-center p-4 bg-white rounded shadow-md">
-          <h3 className="font-bold mb-2">地图加载错误</h3>
-          <p>{mapError}</p>
-          <div className="mt-4 space-y-2">
-            <button 
-              onClick={() => setRetryCount(prev => prev + 1)}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mr-2"
-              disabled={retryCount >= maxRetries}
-            >
-              {retryCount >= maxRetries ? '已达到重试上限' : '重试加载'}
-            </button>
+  // 更新标记
+  useEffect(() => {
+    if (mapInstanceRef.current && window.L && locations.length > 0) {
+      updateMarkers();
+    }
+  }, [locations]);
+  
+  return (
+    <div className="travel-map-container relative w-full h-full">
+      {isLoading && (
+        <div className="absolute inset-0 bg-white bg-opacity-80 flex items-center justify-center z-10">
+          <div className="text-center">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-2 mx-auto"></div>
+            <p>正在加载地图...</p>
+          </div>
+        </div>
+      )}
+      
+      {error && (
+        <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10 p-4">
+          <div className="text-center max-w-md">
+            <h3 className="text-red-600 font-bold mb-2">地图加载失败</h3>
+            <p className="mb-4">{error}</p>
             <button 
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             >
               刷新页面
             </button>
           </div>
         </div>
-      </div>
-    );
-  }
-  
-  return (
-    <div 
-      ref={mapRef} 
-      className={`w-full h-full ${className}`}
-      style={{ minHeight: '400px', width: '100%' }}
-    >
-      {!mapLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-70">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-            <p className="mt-2 text-blue-500">正在加载地图...</p>
-          </div>
-        </div>
       )}
+      
+      <div ref={mapRef} className="w-full h-full min-h-[400px]"></div>
     </div>
   );
 }

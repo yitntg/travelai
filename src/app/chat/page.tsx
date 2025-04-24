@@ -13,8 +13,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChatInterface } from '../../components/chat/ChatInterface';
-import { TravelMap } from '../../components/ui/TravelMap';
+import ChatInterface from '../../components/chat/ChatInterface';
+import TravelMap from '../../components/ui/TravelMap';
 import Link from 'next/link';
 import type { Location } from '@/lib/types';
 
